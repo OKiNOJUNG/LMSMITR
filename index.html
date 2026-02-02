@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LMS - Liquid Glass Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- Base & Typography --- */
+        body {
+            font-family: 'Inter', 'Prompt', sans-serif;
+            background-color: #f3f4f6;
+            overflow-x: hidden;
+        }
+
+        /* --- Animated Liquid Background --- */
+        .liquid-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(45deg, #ff9a9e 0%, #fad0c4 99%, #fad0c4 100%);
+            background-size: 400% 400%;
+            z-index: -2;
+            animation: gradientBG 15s ease infinite;
+        }
+        
+        .liquid-blob {
+            position: fixed;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.8;
+            animation: float 10s infinite ease-in-out;
+        }
+        .blob-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: #a78bfa; animation-delay: 0s; border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+        .blob-2 { bottom: -10%; right: -10%; width: 60vw; height: 60vw; background: #60a5fa; animation-delay: -5s; border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+        .blob-3 { top: 40%; left: 40%; width: 40vw; height: 40vw; background: #f472b6; animation-delay: -2s; border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%; opacity: 0.6; }
+
+        @keyframes gradientBG { 0% {background-position: 0% 50%;} 50% {background-position: 100% 50%;} 100% {background-position: 0% 50%;} }
+        @keyframes float { 0% {transform: translate(0, 0) rotate(0deg);} 33% {transform: translate(30px, -50px) rotate(10deg);} 66% {transform: translate(-20px, 20px) rotate(-5deg);} 100% {transform: translate(0, 0) rotate(0deg);} }
+
+        /* --- Glassmorphism Core --- */
+        .glass {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+        }
+        
+        .glass-dark {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .glass-input {
+            background: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.8);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.2);
+            outline: none;
+        }
+
+        /* --- iOS Elements & Interactions --- */
+        .ios-card {
+            border-radius: 24px;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+        }
+        .ios-card:hover {
+            transform: translateY(-5px) scale(1.01);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+            z-index: 10;
+        }
+
+        .ios-btn {
+            border-radius: 14px;
+            font-weight: 600;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .ios-btn:active { transform: scale(0.94); }
+        .ios-btn::after {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.2); opacity: 0; transition: opacity 0.2s;
+        }
+        .ios-btn:hover::after { opacity: 1; }
+
+        /* Nav Tab */
+        .nav-pill {
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            color: #6b7280;
+        }
+        .nav-pill:hover { background: rgba(255,255,255,0.5); color: #1f2937; }
+        .nav-pill.active {
+            background: #ffffff;
+            color: #2563eb;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            font-weight: 600;
+        }
+
+        /* Table Styles */
+        .glass-table th { background: rgba(249, 250, 251, 0.6); color: #4b5563; }
+        .glass-table tr { transition: background 0.2s; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .glass-table tr:hover { background: rgba(255, 255, 255, 0.8) !important; }
+        .glass-table td { border: none; }
+        
+        /* Calendar */
+        .calendar-day {
+            min-height: 100px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.4);
+            border: 1px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .calendar-day:hover { background: rgba(255,255,255,0.9); transform: scale(1.02); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .calendar-day.today { background: rgba(255,255,255,0.8); border: 2px solid #3b82f6; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 0.8); }
+        
+        .custom-scroll { scrollbar-width: thin; }
+
+        /* Utilities */
+        .hidden { display: none; }
+        .page-transition { animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .cal-event-chip {
+            font-size: 0.65rem; padding: 3px 8px; border-radius: 20px;
+            margin-bottom: 3px; color: white; font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .bg-repair { background: linear-gradient(135deg, #f97316, #fb923c); }
+        .bg-calib { background: linear-gradient(135deg, #9333ea, #c084fc); }
+    </style>
+</head>
+<body class="text-gray-800 antialiased selection:bg-blue-500 selection:text-white">
+
+    <div class="liquid-bg"></div>
+    <div class="liquid-blob blob-1"></div>
+    <div class="liquid-blob blob-2"></div>
+    <div class="liquid-blob blob-3"></div>
+
+    <div id="loginPage" class="min-h-screen flex items-center justify-center px-4 relative">
+        <div class="glass glass-panel p-10 rounded-[32px] w-full max-w-md page-transition relative overflow-hidden">
+            <div class="absolute -top-20 -right-20 w-40 h-40 bg-blue-400 rounded-full filter blur-[50px] opacity-30"></div>
+            
+            <div class="text-center mb-10 relative z-10">
+                <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4 text-3xl">🧪</div>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">Lab Manager</h1>
+                <p class="text-gray-500 mt-2 font-medium">Equipment Management System</p>
+            </div>
+            
+            <form id="loginForm" class="space-y-6 relative z-10">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Email</label>
+                    <input type="email" id="loginEmail" required value="admin@lab.com" class="w-full px-5 py-4 rounded-2xl glass-input text-gray-800 placeholder-gray-400">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 ml-1">Password</label>
+                    <input type="password" id="loginPassword" required value="admin321" class="w-full px-5 py-4 rounded-2xl glass-input text-gray-800 placeholder-gray-400">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-500/30 ios-btn text-lg mt-4">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="mainApp" class="hidden min-h-screen flex flex-col page-transition">
+        
+        <nav class="sticky top-4 z-40 mx-4 lg:mx-8">
+            <div class="glass glass-dark rounded-2xl shadow-sm px-4 lg:px-6 py-3 flex items-center justify-between backdrop-blur-xl">
+                <div class="flex items-center gap-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm">LM</div>
+                        <span class="text-lg font-bold text-gray-800 hidden lg:inline tracking-tight">Lab Manager</span>
+                    </div>
+                    
+                    <div class="hidden md:flex bg-gray-100/50 p-1 rounded-xl gap-1">
+                        <button onclick="showPage('dashboard')" class="nav-pill px-4 py-2 text-sm" id="tabDashboard">Dashboard</button>
+                        <button onclick="showPage('records')" class="nav-pill px-4 py-2 text-sm" id="tabRecords">Records</button>
+                        <button onclick="showPage('addRecord')" class="nav-pill px-4 py-2 text-sm" id="tabAddRecord">Add / Edit</button>
+                        <button id="settingsBtn" onclick="showPage('settings')" class="nav-pill px-4 py-2 text-sm hidden">Admin</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="flex flex-col items-end mr-2">
+                        <span id="userDisplay" class="text-sm font-bold text-gray-800">User</span>
+                        <span id="userRole" class="text-[10px] font-bold tracking-widest text-blue-500 uppercase">Role</span>
+                    </div>
+                    <button onclick="logout()" class="w-10 h-10 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="md:hidden mt-2 flex justify-between bg-white/80 backdrop-blur rounded-xl p-2 shadow-sm overflow-x-auto gap-2">
+                 <button onclick="showPage('dashboard')" class="flex-1 px-3 py-2 text-xs font-medium rounded-lg text-gray-600 bg-white shadow-sm">Dash</button>
+                 <button onclick="showPage('records')" class="flex-1 px-3 py-2 text-xs font-medium rounded-lg text-gray-500">Recs</button>
+                 <button onclick="showPage('addRecord')" class="flex-1 px-3 py-2 text-xs font-medium rounded-lg text-gray-500">Add</button>
+            </div>
+        </nav>
+
+        <div class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            
+            <div id="dashboardPage" class="page space-y-8">
+                <div class="glass p-5 rounded-2xl mb-6 flex flex-col gap-4">
+                    <div class="flex justify-between items-center border-b border-gray-200/50 pb-2 mb-2">
+                        <h3 class="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                            <span class="text-lg">🔍</span> Dashboard Filters
+                        </h3>
+                        <button onclick="clearDashboardFilters()" class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors">
+                            ✕ Clear Filters
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Location</label>
+                            <select id="dashFilterLoc" onchange="updateDashboard()" class="w-full glass-input px-3 py-2 rounded-xl text-xs font-medium">
+                                <option value="">All Locations</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Equipment</label>
+                            <select id="dashFilterEquip" onchange="updateDashboard()" class="w-full glass-input px-3 py-2 rounded-xl text-xs font-medium">
+                                <option value="">All Equipment</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Type</label>
+                            <select id="dashFilterType" onchange="updateDashboard()" class="w-full glass-input px-3 py-2 rounded-xl text-xs font-medium">
+                                <option value="">All Types</option>
+                                <option value="repair">Repair</option>
+                                <option value="calibration">Calibration</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Provider</label>
+                            <select id="dashFilterProv" onchange="updateDashboard()" class="w-full glass-input px-3 py-2 rounded-xl text-xs font-medium">
+                                <option value="">All Providers</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Reporter</label>
+                            <select id="dashFilterRep" onchange="updateDashboard()" class="w-full glass-input px-3 py-2 rounded-xl text-xs font-medium">
+                                <option value="">All Reporters</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="glass ios-card p-6 flex justify-between items-center relative overflow-hidden">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-blue-400/20 rounded-bl-full -mr-4 -mt-4"></div>
+                        <div><p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Total Records</p><h2 class="text-4xl font-bold text-gray-800" id="cardTotalRecords">0</h2></div>
+                        <div class="w-12 h-12 bg-blue-100/80 rounded-2xl flex items-center justify-center text-2xl shadow-sm">📄</div>
+                    </div>
+                    <div class="glass ios-card p-6 flex justify-between items-center relative overflow-hidden">
+                         <div class="absolute right-0 top-0 w-24 h-24 bg-orange-400/20 rounded-bl-full -mr-4 -mt-4"></div>
+                        <div><p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Repairs</p><h2 class="text-4xl font-bold text-orange-600" id="cardRepairs">0</h2></div>
+                        <div class="w-12 h-12 bg-orange-100/80 rounded-2xl flex items-center justify-center text-2xl shadow-sm">🔧</div>
+                    </div>
+                    <div class="glass ios-card p-6 flex justify-between items-center relative overflow-hidden">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-purple-400/20 rounded-bl-full -mr-4 -mt-4"></div>
+                        <div><p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Calibrations</p><h2 class="text-4xl font-bold text-purple-600" id="cardCalibrations">0</h2></div>
+                        <div class="w-12 h-12 bg-purple-100/80 rounded-2xl flex items-center justify-center text-2xl shadow-sm">⚖️</div>
+                    </div>
+                    <div class="glass ios-card p-6 flex justify-between items-center relative overflow-hidden">
+                        <div class="absolute right-0 top-0 w-24 h-24 bg-red-400/20 rounded-bl-full -mr-4 -mt-4"></div>
+                        <div><p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Next 30 Days</p><h2 class="text-4xl font-bold text-red-500" id="cardUpcoming">0</h2></div>
+                        <div class="w-12 h-12 bg-red-100/80 rounded-2xl flex items-center justify-center text-2xl shadow-sm">⏰</div>
+                    </div>
+                </div>
+
+                <div class="glass ios-card p-8">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><span class="bg-blue-500 w-2 h-6 rounded-full inline-block"></span> Schedule</h3>
+                        <div class="flex items-center gap-2 bg-gray-100/50 p-1 rounded-xl backdrop-blur-sm">
+                            <button onclick="previousMonth()" class="w-8 h-8 flex items-center justify-center hover:bg-white hover:shadow rounded-lg transition text-gray-600">❮</button>
+                            <span id="currentMonthYear" class="text-base font-bold min-w-[160px] text-center text-gray-800"></span>
+                            <button onclick="nextMonth()" class="w-8 h-8 flex items-center justify-center hover:bg-white hover:shadow rounded-lg transition text-gray-600">❯</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-4 mb-2 text-center text-gray-400 font-bold text-xs uppercase tracking-widest">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div id="calendar" class="grid grid-cols-7 gap-3"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="glass ios-card p-6 lg:col-span-2">
+                        <h3 class="text-lg font-bold text-gray-800 mb-6">Monthly Activity</h3>
+                        <div class="h-72"><canvas id="monthlyChart"></canvas></div>
+                    </div>
+                    <div class="glass ios-card p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-6">Type Split</h3>
+                        <div class="h-72 flex justify-center"><canvas id="typeChart"></canvas></div>
+                    </div>
+                </div>
+                 <div class="glass ios-card p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6">Location Distribution</h3>
+                    <div class="h-64"><canvas id="locationChart"></canvas></div>
+                </div>
+            </div>
+
+            <div id="recordsPage" class="page hidden space-y-6">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-white/40 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-white/40">
+                    <h2 class="text-2xl font-bold text-gray-800 pl-2">Data Records</h2>
+                    <div class="flex gap-3">
+                        <button onclick="exportToPDF()" class="ios-btn bg-gradient-to-r from-red-500 to-pink-500 text-white px-5 py-2.5 shadow-lg shadow-red-500/20 flex items-center gap-2 text-sm">
+                            <span>📄</span> PDF
+                        </button>
+                        <button onclick="exportToExcel()" class="ios-btn bg-gradient-to-r from-emerald-500 to-green-500 text-white px-5 py-2.5 shadow-lg shadow-green-500/20 flex items-center gap-2 text-sm">
+                            <span>📊</span> Excel
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass p-5 rounded-2xl flex flex-wrap gap-3 items-center">
+                    <div class="flex-grow relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                        <input type="text" id="filterSearch" placeholder="Search Equipment..." onkeyup="applyFilters()" class="w-full glass-input pl-10 pr-4 py-2.5 rounded-xl text-sm">
+                    </div>
+                    <select id="filterType" onchange="applyFilters()" class="glass-input px-4 py-2.5 rounded-xl text-sm min-w-[140px]">
+                        <option value="">All Types</option>
+                        <option value="repair">Repair</option>
+                        <option value="calibration">Calibration</option>
+                    </select>
+                    <div class="flex gap-2">
+                        <select id="filterMonth" onchange="applyFilters()" class="glass-input px-4 py-2.5 rounded-xl text-sm">
+                            <option value="">Month</option>
+                            <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option>
+                            <option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option>
+                            <option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+                        </select>
+                        <select id="filterYear" onchange="applyFilters()" class="glass-input px-4 py-2.5 rounded-xl text-sm">
+                            <option value="">Year</option>
+                            <option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+                        </select>
+                    </div>
+                    <button onclick="clearFilters()" class="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-200/50 transition">Reset</button>
+                </div>
+
+                <div class="glass rounded-3xl overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full glass-table text-left border-collapse">
+                            <thead>
+                                <tr class="text-xs font-bold tracking-wider uppercase border-b border-gray-200/50">
+                                    <th class="px-6 py-4">Equipment / Loc</th>
+                                    <th class="px-6 py-4">Type</th>
+                                    <th class="px-6 py-4">Date</th>
+                                    <th class="px-6 py-4 text-right">Cost</th>
+                                    <th class="px-6 py-4">Provider</th>
+                                    <th class="px-6 py-4">Reporter</th>
+                                    <th class="px-6 py-4 text-center">PO</th>
+                                    <th class="px-6 py-4 text-center">Status</th>
+                                    <th class="px-6 py-4 text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="recordsTableBody" class="text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center px-4">
+                    <div class="text-sm text-gray-500 font-medium">Showing <span id="startRow">0</span>-<span id="endRow">0</span> of <span id="totalRows">0</span></div>
+                    <div class="flex gap-2">
+                        <button onclick="prevPage()" class="glass-input px-4 py-2 rounded-xl text-sm hover:bg-white">Previous</button>
+                        <button onclick="nextPage()" class="glass-input px-4 py-2 rounded-xl text-sm hover:bg-white">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="addRecordPage" class="page hidden flex justify-center">
+                <div class="w-full max-w-3xl glass ios-card p-8 md:p-10">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white text-xl shadow-lg shadow-blue-500/30">✏️</div>
+                        <h2 class="text-2xl font-bold text-gray-800" id="formTitle">New Record</h2>
+                    </div>
+
+                    <form id="addRecordForm" class="space-y-6">
+                        <input type="hidden" id="editRecordId">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-1 md:col-span-2">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Location</label>
+                                <select id="buildingSelect" required onchange="updateEquipmentOptions()" class="w-full glass-input px-4 py-3 rounded-xl">
+                                    <option value="">Select location</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Equipment</label>
+                                <select id="equipmentSelect" required class="w-full glass-input px-4 py-3 rounded-xl">
+                                    <option value="">Select location first</option>
+                                </select>
+                            </div>
+                             <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Service Type</label>
+                                <select id="serviceType" required onchange="toggleServiceFields()" class="w-full glass-input px-4 py-3 rounded-xl">
+                                    <option value="repair">Repair</option>
+                                    <option value="calibration">Calibration</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Date</label>
+                                <input type="date" id="serviceDate" required class="w-full glass-input px-4 py-3 rounded-xl">
+                            </div>
+                            <div id="nextServiceDateContainer" class="hidden space-y-1">
+                                <label class="text-xs font-bold text-blue-500 uppercase ml-1">Next Calibration Due</label>
+                                <input type="date" id="nextServiceDate" class="w-full glass-input px-4 py-3 rounded-xl border-blue-200 bg-blue-50/30">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Cost (THB)</label>
+                                <input type="number" step="any" id="maintenanceCost" class="w-full glass-input px-4 py-3 rounded-xl" placeholder="0.00">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Provider</label>
+                                <select id="technicianSelect" class="w-full glass-input px-4 py-3 rounded-xl"></select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Reporter</label>
+                                <select id="reporterSelect" required class="w-full glass-input px-4 py-3 rounded-xl"></select>
+                            </div>
+                             <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">Status</label>
+                                <select id="recordStatus" class="w-full glass-input px-4 py-3 rounded-xl">
+                                    <option value="pending">Pending</option>
+                                    <option value="complete">Complete</option>
+                                    <option value="ignored">Ignored</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1 md:col-span-2">
+                                <label class="text-xs font-bold text-gray-500 uppercase ml-1">PO Document (PDF)</label>
+                                <div class="relative">
+                                    <input type="file" id="poFileUpload" accept="application/pdf" class="w-full glass-input px-4 py-3 rounded-xl text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
+                                </div>
+                                <div id="existingPoLabel" class="text-xs text-green-600 font-medium mt-1 ml-2 hidden">✓ Current file attached</div>
+                            </div>
+                        </div>
+
+                        <div class="pt-6 flex justify-end gap-4">
+                            <button type="button" onclick="showPage('records')" class="px-6 py-3 rounded-xl text-gray-500 font-medium hover:bg-gray-200/50 transition">Cancel</button>
+                            <button type="submit" class="ios-btn bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 shadow-lg shadow-blue-500/30" id="saveBtn">Save Record</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="settingsPage" class="page hidden space-y-8 pb-10">
+                <div class="flex items-center gap-3 pl-2">
+                    <div class="w-10 h-10 rounded-xl bg-purple-500 flex items-center justify-center text-white text-xl shadow-lg shadow-purple-500/30">⚙️</div>
+                    <h2 class="text-3xl font-bold text-gray-800">Administration</h2>
+                </div>
+                
+                <div class="glass ios-card p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-blue-500"></span> User Management
+                    </h3>
+                    <div class="bg-white/50 p-4 rounded-xl mb-4 flex gap-3 flex-wrap items-end border border-white/60">
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Email</label>
+                            <input type="email" id="adminUserEmail" class="glass-input w-full p-2 rounded-lg text-sm mt-1">
+                        </div>
+                        <div class="flex-1 min-w-[150px]">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Name</label>
+                            <input type="text" id="adminUserName" class="glass-input w-full p-2 rounded-lg text-sm mt-1">
+                        </div>
+                        <div class="flex-1 min-w-[120px]">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Password</label>
+                            <input type="text" id="adminUserPass" class="glass-input w-full p-2 rounded-lg text-sm mt-1">
+                        </div>
+                         <div class="w-[100px]">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Role</label>
+                            <select id="adminUserRole" class="glass-input w-full p-2 rounded-lg text-sm mt-1"><option value="user">User</option><option value="admin">Admin</option></select>
+                        </div>
+                        <button onclick="adminSaveUser()" id="btnSaveUser" class="ios-btn bg-purple-600 text-white px-5 py-2 text-sm shadow-lg shadow-purple-500/30">Add</button>
+                        <button onclick="adminCancelUser()" id="btnCancelUser" class="hidden px-4 py-2 text-sm text-gray-500 hover:bg-gray-200 rounded-lg">Cancel</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left glass-table rounded-lg overflow-hidden" id="adminUserTable">
+                            <thead class="bg-gray-100/50 text-gray-500 uppercase text-xs"><tr><th class="p-3">Email</th><th class="p-3">Name</th><th class="p-3">Role</th><th class="p-3 text-right">Actions</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass ios-card p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span> Locations
+                        </h3>
+                        <div class="flex gap-2 mb-4">
+                            <input type="hidden" id="adminLocId">
+                            <input type="text" id="adminLocName" placeholder="New Location Name" class="glass-input w-full p-2 rounded-lg text-sm">
+                            <button onclick="adminSaveLocation()" id="btnSaveLoc" class="ios-btn bg-blue-600 text-white px-4 py-2 text-sm shadow-md">Add</button>
+                            <button onclick="adminCancelLocation()" id="btnCancelLoc" class="hidden text-gray-500 px-2 text-sm font-bold">✕</button>
+                        </div>
+                        <div class="max-h-60 overflow-y-auto pr-1 custom-scroll">
+                            <table class="w-full text-sm glass-table" id="adminLocationTable"><tbody class="text-sm"></tbody></table>
+                        </div>
+                    </div>
+
+                    <div class="glass ios-card p-6">
+                        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-orange-500"></span> Companies
+                        </h3>
+                        <div class="flex gap-2 mb-4">
+                            <input type="hidden" id="adminCompOldName">
+                            <input type="text" id="adminCompName" placeholder="New Company Name" class="glass-input w-full p-2 rounded-lg text-sm">
+                            <button onclick="adminSaveCompany()" id="btnSaveComp" class="ios-btn bg-blue-600 text-white px-4 py-2 text-sm shadow-md">Add</button>
+                            <button onclick="adminCancelCompany()" id="btnCancelComp" class="hidden text-gray-500 px-2 text-sm font-bold">✕</button>
+                        </div>
+                        <div class="max-h-60 overflow-y-auto pr-1 custom-scroll">
+                            <table class="w-full text-sm glass-table" id="adminCompanyTable"><tbody class="text-sm"></tbody></table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass ios-card p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-pink-500"></span> Equipment Inventory
+                    </h3>
+                    <div class="bg-white/50 p-4 rounded-xl mb-4 flex gap-3 flex-wrap items-end border border-white/60">
+                        <input type="hidden" id="adminEquipId">
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Equipment Name</label>
+                            <input type="text" id="adminEquipName" placeholder="e.g. Spectrophotometer" class="glass-input w-full p-2 rounded-lg text-sm mt-1">
+                        </div>
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase">Location</label>
+                            <select id="adminEquipLoc" class="glass-input w-full p-2 rounded-lg text-sm mt-1"></select>
+                        </div>
+                        <button onclick="adminSaveEquipment()" id="btnSaveEquip" class="ios-btn bg-purple-600 text-white px-5 py-2 text-sm shadow-lg shadow-purple-500/30">Add Item</button>
+                        <button onclick="adminCancelEquipment()" id="btnCancelEquip" class="hidden px-4 py-2 text-sm text-gray-500 hover:bg-gray-200 rounded-lg">Cancel</button>
+                    </div>
+                    <div class="max-h-80 overflow-y-auto custom-scroll">
+                        <table class="w-full text-sm text-left glass-table" id="adminEquipmentTable">
+                            <thead class="bg-gray-100/50 text-gray-500 uppercase text-xs sticky top-0 backdrop-blur-md">
+                                <tr><th class="p-3">Equipment Name</th><th class="p-3">Location</th><th class="p-3 text-right">Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="glass ios-card p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-teal-500"></span> Reporters
+                    </h3>
+                    <div class="flex gap-2 mb-4 items-end">
+                        <div class="flex-1">
+                            <input type="hidden" id="adminReporterOldName">
+                            <label class="text-[10px] font-bold text-gray-400 uppercase ml-1">Reporter Name</label>
+                            <input type="text" id="adminReporterName" placeholder="Dr. Somchai..." class="glass-input w-full p-2 rounded-lg text-sm mt-1">
+                        </div>
+                        <button onclick="adminSaveReporter()" id="btnSaveReporter" class="ios-btn bg-blue-600 text-white px-6 py-2 text-sm shadow-md h-[38px]">Add</button>
+                        <button onclick="adminCancelReporter()" id="btnCancelReporter" class="hidden text-gray-500 px-4 py-2 text-sm hover:bg-gray-200 rounded-lg h-[38px]">Cancel</button>
+                    </div>
+                    <div class="max-h-60 overflow-y-auto custom-scroll">
+                         <table class="w-full text-sm glass-table" id="adminReporterTable">
+                            <thead class="bg-gray-100/50 text-gray-500 uppercase text-xs sticky top-0 backdrop-blur-md">
+                                <tr><th class="p-3">Reporter Name</th><th class="p-3 text-right">Actions</th></tr>
+                            </thead>
+                            <tbody class="text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="glass ios-card p-6 flex items-center justify-between mt-8">
+                     <div>
+                        <h3 class="text-lg font-bold text-gray-800">System Data</h3>
+                        <p class="text-xs text-gray-500">Backup or restore your database JSON.</p>
+                     </div>
+                     <div class="flex gap-3">
+                         <button onclick="backupData()" class="ios-btn bg-green-500 text-white px-4 py-2 text-sm shadow-lg shadow-green-500/20">Backup Data</button>
+                         <button onclick="document.getElementById('importFile').click()" class="ios-btn bg-blue-500 text-white px-4 py-2 text-sm shadow-lg shadow-blue-500/20">Import JSON</button>
+                         <input type="file" id="importFile" class="hidden" accept=".json" onchange="importData(this)">
+                     </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="calendarModal" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="glass glass-dark rounded-3xl shadow-2xl w-full max-w-md overflow-hidden transform scale-100 transition-all">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white/40">
+                <h3 id="modalDateTitle" class="text-lg font-bold text-gray-800">Tasks</h3>
+                <button onclick="closeCalendarModal()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-500">✕</button>
+            </div>
+            <div id="calendarModalContent" class="p-5 max-h-[60vh] overflow-y-auto space-y-4"></div>
+        </div>
+    </div>
+
+    <div id="poViewerModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden">
+            <div class="flex justify-between items-center px-6 py-4 border-b">
+                <h3 class="text-lg font-bold text-gray-800">Document Viewer</h3>
+                <button onclick="closePOViewerModal()" class="text-gray-400 hover:text-red-500 text-2xl">✕</button>
+            </div>
+            <div class="flex-1 bg-gray-100 p-2" id="poPdfPreviewArea"></div>
+        </div>
+    </div>
+
+    <div id="calendarTooltip" class="cal-tooltip fixed bg-black/80 text-white text-xs p-2 rounded-lg z-[100] hidden pointer-events-none backdrop-blur-md"></div>
+
+<script>
+// --- Data Stores ---
+let users = { 
+    'admin@lab.com': { password: 'admin321', role: 'admin', name: 'Administrator' },
+    'user@lab.com': { password: 'user123', role: 'user', name: 'Standard User' }
+};
+let currentUser = null;
+let records = [];
+
+let technicians = ['Siam Instrument Service Co.,Ltd.', 'Lab Master Solutions', 'Precision Tech Service', 'General Science Supply'];
+let reporters = ['Dr. Somchai Jaidee', 'Ms. Nalinee Sanga', 'Laboratory Technician', 'Administrative Staff'];
+let buildings = [ 
+    { id: 1, name: 'Science Building Floor 1' }, 
+    { id: 2, name: 'Science Building Floor 2' },
+    { id: 3, name: 'Equipment Storage Room' },
+    { id: 4, name: 'Analytical Chemistry Laboratory' }
+];
+let equipment = [ 
+    { id: 1, name: 'Spectrophotometer UV-Vis', building_id: 1 }, 
+    { id: 2, name: 'Gas Chromatograph', building_id: 2 },
+    { id: 3, name: 'pH Meter Digital', building_id: 1 },
+    { id: 4, name: 'FTIR Spectrometer', building_id: 2 },
+    { id: 5, name: 'Centrifuge', building_id: 1 },
+    { id: 6, name: 'Rotary Evaporator', building_id: 2 }
+];
+let poFiles = {}; 
+
+let currentCalendarMonth = new Date();
+let charts = {};
+let tempPoFile = null;
+
+// Pagination Vars
+let currentPage = 1;
+const rowsPerPage = 15;
+let filteredRecords = [];
+
+// --- Initialization ---
+window.addEventListener('DOMContentLoaded', () => {
+    if(records.length === 0) generateSampleData();
+    document.getElementById('loginForm').addEventListener('submit', handleLogin);
+});
+
+function initApp() {
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('userDisplay').textContent = currentUser.name;
+    document.getElementById('userRole').textContent = currentUser.role.toUpperCase();
+    if(currentUser.role === 'admin') document.getElementById('settingsBtn').classList.remove('hidden');
+    showPage('dashboard');
+
+    document.getElementById('addRecordForm').addEventListener('submit', handleSaveRecord);
+    document.getElementById('poFileUpload').addEventListener('change', handleFileSelect);
+    
+    // Global Funcs
+    window.fullEditRecord = loadEditForm; 
+    window.deleteRecord = deleteRecord;
+    window.viewPO = viewPO;
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) { tempPoFile = { name: file.name, data: evt.target.result }; };
+    reader.readAsDataURL(file);
+}
+
+function formatCurrency(num) {
+    if(!num) return '-';
+    return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function generateSampleData() {
+    const today = new Date();
+    for(let i=1; i<=40; i++) {
+        const type = i % 3 === 0 ? 'calibration' : 'repair';
+        const cost = (Math.floor(Math.random() * 40) + 5) * 1000;
+        const eqItem = equipment[i % equipment.length];
+        const bItem = buildings.find(b=>b.id === eqItem.building_id);
+        
+        records.push({
+            id: Date.now() + i,
+            equipment_name: eqItem.name,
+            building: bItem ? bItem.name : '', 
+            type: type,
+            service_date: new Date(today.getFullYear(), today.getMonth() - (i%5), (i % 28) + 1).toISOString().split('T')[0],
+            next_service_date: type === 'calibration' ? new Date(today.getFullYear(), today.getMonth()+2, i).toISOString().split('T')[0] : '',
+            technicians: [technicians[i % technicians.length]],
+            reporter: reporters[i % reporters.length],
+            maintenance_cost: cost.toString(),
+            calendar_status: i % 5 === 0 ? 'complete' : 'pending',
+            po_file: i % 4 === 0 ? 'mock.pdf' : ''
+        });
+        if(i % 4 === 0) poFiles[records[records.length-1].id] = { name: 'mock.pdf', data: '' };
+    }
+}
+
+function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const pwd = document.getElementById('loginPassword').value;
+    if(users[email] && users[email].password === pwd) {
+        currentUser = { ...users[email], email };
+        initApp();
+    } else { Swal.fire({ title: 'Error', text: 'Invalid credentials', icon: 'error', confirmButtonColor: '#3b82f6' }); }
+}
+function logout() { currentUser = null; location.reload(); }
+
+function showPage(page) {
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById(page+'Page').classList.remove('hidden');
+    document.querySelectorAll('.nav-pill').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab'+page.charAt(0).toUpperCase()+page.slice(1))?.classList.add('active');
+    
+    if(page === 'dashboard') loadDashboard();
+    if(page === 'records') loadRecords();
+    if(page === 'addRecord') loadAddRecordForm();
+    if(page === 'settings') loadSettings();
+}
+
+// --- Dashboard ---
+
+// [NEW] Updated loadDashboard to include filters
+function loadDashboard() {
+    initDashboardFilters(); 
+    updateDashboard(); 
+}
+
+// [NEW] Filter Initialization
+function initDashboardFilters() {
+    const populate = (id, list) => {
+        const el = document.getElementById(id);
+        const currentVal = el.value;
+        el.innerHTML = el.firstElementChild.outerHTML; 
+        const uniqueItems = [...new Set(list)].sort();
+        uniqueItems.forEach(item => {
+            if(item) el.innerHTML += `<option value="${item}">${item}</option>`;
+        });
+        el.value = currentVal;
+    };
+
+    populate('dashFilterLoc', buildings.map(b => b.name));
+    populate('dashFilterEquip', equipment.map(e => e.name));
+    populate('dashFilterProv', technicians);
+    populate('dashFilterRep', reporters);
+}
+
+// [NEW] Main Filter Logic
+function updateDashboard() {
+    const fLoc = document.getElementById('dashFilterLoc').value;
+    const fEquip = document.getElementById('dashFilterEquip').value;
+    const fType = document.getElementById('dashFilterType').value;
+    const fProv = document.getElementById('dashFilterProv').value;
+    const fRep = document.getElementById('dashFilterRep').value;
+
+    const filteredData = records.filter(r => {
+        const matchLoc = !fLoc || r.building === fLoc;
+        const matchEquip = !fEquip || r.equipment_name === fEquip;
+        const matchType = !fType || r.type === fType;
+        const matchProv = !fProv || (r.technicians && r.technicians.includes(fProv));
+        const matchRep = !fRep || r.reporter === fRep;
+        
+        return matchLoc && matchEquip && matchType && matchProv && matchRep;
+    });
+
+    renderCalendar(); 
+    renderCharts(filteredData);
+    updateDashboardCards(filteredData);
+}
+
+function clearDashboardFilters() {
+    document.getElementById('dashFilterLoc').value = "";
+    document.getElementById('dashFilterEquip').value = "";
+    document.getElementById('dashFilterType').value = "";
+    document.getElementById('dashFilterProv').value = "";
+    document.getElementById('dashFilterRep').value = "";
+    updateDashboard();
+}
+
+// [NEW] Updated Cards to accept data
+function updateDashboardCards(data) {
+    const sourceData = data || records; 
+
+    document.getElementById('cardTotalRecords').innerText = sourceData.length;
+    document.getElementById('cardRepairs').innerText = sourceData.filter(r=>r.type==='repair').length;
+    document.getElementById('cardCalibrations').innerText = sourceData.filter(r=>r.type==='calibration').length;
+    
+    const today = new Date();
+    const next30 = new Date(); next30.setDate(today.getDate() + 30);
+    const upcoming = sourceData.filter(r => {
+        let checkDate = null;
+        if (r.type === 'calibration' && r.next_service_date) checkDate = new Date(r.next_service_date);
+        else if (r.type === 'repair' && r.service_date) checkDate = new Date(r.service_date);
+        if (checkDate) return checkDate >= today && checkDate <= next30;
+        return false;
+    }).length;
+    document.getElementById('cardUpcoming').innerText = upcoming;
+}
+
+function renderCalendar() {
+    const year = currentCalendarMonth.getFullYear();
+    const month = currentCalendarMonth.getMonth();
+    document.getElementById('currentMonthYear').textContent = new Date(year, month).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const calendar = document.getElementById('calendar');
+    calendar.innerHTML = '';
+    
+    for(let i=0; i<firstDay; i++) calendar.innerHTML += `<div></div>`;
+    
+    for(let day=1; day<=daysInMonth; day++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const items = records.filter(r => (r.type==='repair' && r.service_date===dateStr) || (r.type==='calibration' && r.next_service_date===dateStr));
+        const isToday = new Date().toISOString().split('T')[0] === dateStr;
+        
+        let html = `<div class="text-right text-xs font-bold ${isToday?'text-blue-600':'text-gray-400'} mb-1">${day}</div>`;
+        items.slice(0,3).forEach(i => {
+            const bgClass = i.type === 'repair' ? 'bg-repair' : 'bg-calib';
+            const opacity = i.calendar_status === 'complete' ? 'opacity-50' : 'opacity-100';
+            html += `<div class="cal-event-chip ${bgClass} ${opacity}">${i.equipment_name.substring(0,8)}..</div>`;
+        });
+        
+        const div = document.createElement('div');
+        div.className = `calendar-day ${isToday?'today':''}`;
+        div.innerHTML = html;
+        div.onclick = () => openCalendarDay(dateStr, items);
+        calendar.appendChild(div);
+    }
+}
+
+f// แทนที่ฟังก์ชัน openCalendarDay เดิมด้วยอันนี้
+function openCalendarDay(dateStr, items) {
+    if(items.length === 0) return;
+    const content = document.getElementById('calendarModalContent');
+    const modalTitle = document.getElementById('modalDateTitle');
+    
+    // จัดรูปแบบวันที่ส่วนหัวให้สวยงาม
+    const dateObj = new Date(dateStr);
+    modalTitle.innerHTML = `
+        <div class="flex flex-col">
+            <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Schedule for</span>
+            <span class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                🗓️ ${dateObj.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
+        </div>
+    `;
+    
+    // สร้าง HTML สำหรับแต่ละรายการ
+    content.innerHTML = items.map(i => {
+        // Logic สำหรับสีและไอคอน
+        const isComplete = i.calendar_status === 'complete';
+        const isIgnored = i.calendar_status === 'ignored';
+        
+        // สีแถบข้างและ Badge
+        let statusColor = 'bg-yellow-500'; // Default Pending
+        let statusBadgeClass = 'text-yellow-700 bg-yellow-50 border-yellow-200';
+        
+        if (isComplete) {
+            statusColor = 'bg-green-500';
+            statusBadgeClass = 'text-green-700 bg-green-50 border-green-200';
+        } else if (isIgnored) {
+            statusColor = 'bg-gray-400';
+            statusBadgeClass = 'text-gray-500 bg-gray-100 border-gray-200';
+        }
+
+        // Logic ประเภทงาน
+        const isRepair = i.type === 'repair';
+        const typeIcon = isRepair ? '🔧' : '⚖️';
+        const typeStyle = isRepair ? 'text-orange-600 bg-orange-50' : 'text-purple-600 bg-purple-50';
+
+        // ปุ่ม PO
+        const poBtn = i.po_file ? 
+            `<button onclick="viewPO(${i.id})" class="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 flex items-center gap-1 transition shadow-sm">
+                📄 View PDF
+            </button>` : 
+            `<span class="text-[10px] text-gray-400 italic flex items-center gap-1">🚫 No Doc</span>`;
+
+        return `
+        <div class="bg-white rounded-2xl p-0 shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all relative group mb-3 last:mb-0">
+            <div class="absolute left-0 top-0 bottom-0 w-1.5 ${statusColor}"></div>
+            
+            <div class="p-4 pl-5">
+                <div class="flex justify-between items-start mb-3">
+                    <div class="pr-2">
+                        <h4 class="font-bold text-gray-800 text-base leading-tight">${i.equipment_name}</h4>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500 flex items-center gap-1 bg-gray-50 px-1.5 py-0.5 rounded">
+                                📍 ${i.building || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                    <span class="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide border ${statusBadgeClass} shadow-sm whitespace-nowrap">
+                        ${i.calendar_status}
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-y-3 gap-x-4 text-sm bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                    
+                    <div class="col-span-2 sm:col-span-1">
+                        <label class="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Job Type</label>
+                        <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md ${typeStyle} text-xs font-bold capitalize border border-black/5">
+                            ${typeIcon} ${i.type}
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-2 sm:col-span-1">
+                        <label class="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Est. Cost</label>
+                        <span class="font-mono text-gray-700 font-bold text-xs">฿${formatCurrency(i.maintenance_cost)}</span>
+                    </div>
+
+                    <div class="col-span-2">
+                        <label class="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Service Provider</label>
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs text-gray-700 font-medium truncate w-full" title="${i.technicians[0]}">🏢 ${i.technicians[0] || '-'}</span>
+                        </div>
+                    </div>
+
+                    <div class="col-span-2 sm:col-span-1">
+                        <label class="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Reporter</label>
+                        <span class="text-xs text-gray-600 block truncate" title="${i.reporter}">👤 ${i.reporter || '-'}</span>
+                    </div>
+
+                    <div class="col-span-2 sm:col-span-1">
+                         <label class="text-[9px] font-bold text-gray-400 uppercase tracking-wider block mb-0.5">Reference</label>
+                         ${poBtn}
+                    </div>
+                </div>
+
+                <div class="mt-4 flex gap-2">
+                    <button onclick="updateCalStatus(${i.id}, 'complete')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border ${isComplete ? 'bg-green-600 text-white border-green-600 shadow-md shadow-green-200' : 'bg-white text-gray-600 border-gray-200 hover:border-green-500 hover:text-green-600'}">
+                        ${isComplete ? '✓ Completed' : 'Mark Complete'}
+                    </button>
+                    
+                    <button onclick="updateCalStatus(${i.id}, 'pending')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border ${!isComplete && !isIgnored ? 'bg-yellow-500 text-white border-yellow-500 shadow-md shadow-yellow-200' : 'bg-white text-gray-600 border-gray-200 hover:border-yellow-500 hover:text-yellow-600'}">
+                        Pending
+                    </button>
+                    
+                     <button onclick="updateCalStatus(${i.id}, 'ignored')" class="w-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all border border-gray-200 bg-white text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200" title="Ignore / Remove">
+                        ✕
+                    </button>
+                </div>
+            </div>
+        </div>
+        `;
+    }).join('');
+    
+    // แสดง Modal
+    document.getElementById('calendarModal').classList.remove('hidden');
+}
+
+function closeCalendarModal() { document.getElementById('calendarModal').classList.add('hidden'); renderCalendar(); }
+function updateCalStatus(id, status) {
+    const r = records.find(r=>r.id===id);
+    if(r) r.calendar_status = status;
+    closeCalendarModal();
+    loadRecords();
+}
+function previousMonth() { currentCalendarMonth.setMonth(currentCalendarMonth.getMonth()-1); renderCalendar(); }
+function nextMonth() { currentCalendarMonth.setMonth(currentCalendarMonth.getMonth()+1); renderCalendar(); }
+
+// --- Charts ---
+
+// [NEW] Updated Charts to accept data
+function renderCharts(data) {
+    const sourceData = data || records;
+
+    if(charts.monthly) charts.monthly.destroy();
+    if(charts.type) charts.type.destroy();
+    if(charts.loc) charts.loc.destroy();
+
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const repairData = new Array(12).fill(0);
+    const calibData = new Array(12).fill(0);
+    sourceData.forEach(r => {
+        const d = new Date(r.service_date);
+        if(d.getFullYear() === currentCalendarMonth.getFullYear()) {
+             if(r.type==='repair') repairData[d.getMonth()]++; else calibData[d.getMonth()]++;
+        }
+    });
+
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = '#6b7280';
+
+    charts.monthly = new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: { labels: months, datasets: [ 
+            { label: 'Repairs', data: repairData, backgroundColor: '#fb923c', borderRadius: 4 }, 
+            { label: 'Calibrations', data: calibData, backgroundColor: '#c084fc', borderRadius: 4 } 
+        ]},
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } },
+            animation: { duration: 500 }
+        }
+    });
+
+    const totalRepairs = sourceData.filter(r => r.type === 'repair').length;
+    const totalCalibs = sourceData.filter(r => r.type === 'calibration').length;
+    charts.type = new Chart(document.getElementById('typeChart'), {
+        type: 'doughnut',
+        data: { labels: ['Repair', 'Calibration'], datasets: [{ data: [totalRepairs, totalCalibs], backgroundColor: ['#fb923c', '#c084fc'], borderWidth: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', animation: { duration: 500 } }
+    });
+
+    const locLabels = buildings.map(b => b.name);
+    const locData = locLabels.map(name => sourceData.filter(r => r.building === name).length);
+    charts.loc = new Chart(document.getElementById('locationChart'), {
+        type: 'bar',
+        data: { labels: locLabels.map(l => l.substring(0, 10) + '..'), datasets: [{ label: 'Items', data: locData, backgroundColor: '#60a5fa', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(0,0,0,0.05)' } } }, animation: { duration: 500 } }
+    });
+}
+
+// --- Records Table ---
+function loadRecords() { applyFilters(); }
+function applyFilters() {
+    const s = document.getElementById('filterSearch').value.toLowerCase();
+    const t = document.getElementById('filterType').value;
+    const m = document.getElementById('filterMonth').value;
+    const y = document.getElementById('filterYear').value;
+
+    filteredRecords = records.filter(r => {
+        const d = new Date(r.service_date);
+        const matchMonth = m ? (d.getMonth() + 1) == m : true;
+        const matchYear = y ? d.getFullYear() == y : true;
+        return r.equipment_name.toLowerCase().includes(s) && (!t || r.type === t) && matchMonth && matchYear;
+    });
+    filteredRecords.sort((a,b) => b.id - a.id);
+    currentPage = 1;
+    renderRecordsTable();
+}
+
+function renderRecordsTable() {
+    const tbody = document.getElementById('recordsTableBody');
+    tbody.innerHTML = '';
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageData = filteredRecords.slice(start, end);
+
+    document.getElementById('startRow').innerText = pageData.length > 0 ? start + 1 : 0;
+    document.getElementById('endRow').innerText = Math.min(end, filteredRecords.length);
+    document.getElementById('totalRows').innerText = filteredRecords.length;
+
+    pageData.forEach((r, i) => {
+        let statusBadge = r.calendar_status === 'complete' ? 
+            '<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Complete</span>' : 
+            (r.calendar_status === 'ignored' ? '<span class="bg-gray-200 text-gray-500 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Ignored</span>' : '<span class="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Pending</span>');
+        let poBtn = r.po_file ? `<button onclick="viewPO(${r.id})" class="text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md">VIEW</button>` : '<span class="text-gray-300">-</span>';
+
+        const tr = document.createElement('tr');
+        tr.className = "group";
+        tr.innerHTML = `
+            <td class="px-6 py-4"><div class="font-semibold text-gray-800">${r.equipment_name}</div><div class="text-[10px] text-gray-400 font-bold uppercase tracking-wide">${r.building||'N/A'}</div></td>
+            <td class="px-6 py-4"><span class="w-2 h-2 rounded-full inline-block mr-2 ${r.type==='repair'?'bg-orange-400':'bg-purple-400'}"></span><span class="text-sm text-gray-600 capitalize">${r.type}</span></td>
+            <td class="px-6 py-4 text-gray-500 font-mono text-xs">${r.service_date}</td>
+            <td class="px-6 py-4 text-right font-medium text-gray-700">${formatCurrency(r.maintenance_cost)}</td>
+            <td class="px-6 py-4 text-gray-500 text-xs max-w-[150px] truncate">${r.technicians[0] || '-'}</td>
+            <td class="px-6 py-4 text-gray-500 text-xs">${r.reporter || '-'}</td>
+            <td class="px-6 py-4 text-center">${poBtn}</td>
+            <td class="px-6 py-4 text-center">${statusBadge}</td>
+            <td class="px-6 py-4 text-center">
+                <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="fullEditRecord(${r.id})" class="w-8 h-8 rounded-full bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-500 flex items-center justify-center transition">✏️</button>
+                    <button onclick="deleteRecord(${r.id})" class="w-8 h-8 rounded-full bg-red-50 hover:bg-red-500 hover:text-white text-red-500 flex items-center justify-center transition">✕</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+function prevPage() { if(currentPage > 1) { currentPage--; renderRecordsTable(); } }
+function nextPage() { if((currentPage * rowsPerPage) < filteredRecords.length) { currentPage++; renderRecordsTable(); } }
+function clearFilters() {
+    document.getElementById('filterSearch').value = '';
+    document.getElementById('filterType').value = '';
+    document.getElementById('filterMonth').value = '';
+    document.getElementById('filterYear').value = '';
+    applyFilters();
+}
+
+// --- Import / Backup ---
+function backupData() {
+    const data = JSON.stringify({users, records, technicians, reporters, buildings, equipment});
+    const blob = new Blob([data], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='lab_backup.json'; a.click();
+}
+function importData(input) {
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const d = JSON.parse(e.target.result);
+            if(d.records) records = d.records;
+            if(d.users) users = d.users;
+            if(d.buildings) buildings = d.buildings;
+            if(d.equipment) equipment = d.equipment;
+            if(d.technicians) technicians = d.technicians;
+            if(d.reporters) reporters = d.reporters;
+            Swal.fire({ title: 'Success', text: 'Data Imported', icon: 'success', timer: 1500, showConfirmButton: false }).then(() => {
+                loadSettings(); loadDashboard(); loadRecords();
+            });
+        } catch(err) { Swal.fire('Error', 'Invalid JSON', 'error'); }
+    };
+    reader.readAsText(input.files[0]);
+    input.value = '';
+}
+
+// --- Admin Funcs (Complete with all sections) ---
+
+function loadSettings() {
+    renderAdminUsers();
+    renderAdminLocations();
+    renderAdminCompanies();
+    renderAdminEquipment();
+    renderAdminReporters();
+}
+
+// 1. User
+function renderAdminUsers() {
+    document.querySelector('#adminUserTable tbody').innerHTML = Object.entries(users).map(([email, u]) => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 font-medium text-gray-700">${email}</td>
+        <td class="p-3 text-gray-500">${u.name}</td><td class="p-3 text-gray-500">${u.role}</td>
+        <td class="p-3 text-right"><button onclick="adminDeleteUser('${email}')" class="text-red-400 hover:text-red-600 font-bold">✕</button></td></tr>`).join('');
+}
+function adminSaveUser() {
+    const e = document.getElementById('adminUserEmail').value;
+    const n = document.getElementById('adminUserName').value;
+    const p = document.getElementById('adminUserPass').value;
+    const r = document.getElementById('adminUserRole').value;
+    if(e && n && p) { users[e] = { name: n, password: p, role: r }; renderAdminUsers(); adminCancelUser(); }
+}
+function adminCancelUser() {
+    document.getElementById('adminUserEmail').value = ''; document.getElementById('adminUserName').value = ''; document.getElementById('adminUserPass').value = '';
+}
+function adminDeleteUser(email) { if(email !== 'admin@lab.com') { delete users[email]; renderAdminUsers(); } }
+
+// 2. Location
+function renderAdminLocations() {
+    document.querySelector('#adminLocationTable tbody').innerHTML = buildings.map(b => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 text-gray-700">${b.name}</td>
+        <td class="p-3 text-right"><button onclick="adminDeleteLocation(${b.id})" class="text-red-400 font-bold">✕</button></td></tr>`).join('');
+}
+function adminSaveLocation() {
+    const name = document.getElementById('adminLocName').value;
+    if(name) { buildings.push({ id: Date.now(), name }); renderAdminLocations(); document.getElementById('adminLocName').value=''; }
+}
+function adminDeleteLocation(id) { buildings = buildings.filter(b => b.id !== id); renderAdminLocations(); }
+
+// 3. Company
+function renderAdminCompanies() {
+    document.querySelector('#adminCompanyTable tbody').innerHTML = technicians.map(t => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 text-gray-700">${t}</td>
+        <td class="p-3 text-right"><button onclick="adminDeleteCompany('${t}')" class="text-red-400 font-bold">✕</button></td></tr>`).join('');
+}
+function adminSaveCompany() {
+    const name = document.getElementById('adminCompName').value;
+    if(name) { technicians.push(name); renderAdminCompanies(); document.getElementById('adminCompName').value=''; }
+}
+function adminDeleteCompany(name) { technicians = technicians.filter(t => t !== name); renderAdminCompanies(); }
+
+// 4. Equipment Inventory
+function renderAdminEquipment() {
+    const locSelect = document.getElementById('adminEquipLoc');
+    locSelect.innerHTML = buildings.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+    
+    document.querySelector('#adminEquipmentTable tbody').innerHTML = equipment.map(e => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+            <td class="p-3 font-medium text-gray-700">${e.name}</td>
+            <td class="p-3 text-gray-500 text-xs uppercase tracking-wide">${buildings.find(b=>b.id===e.building_id)?.name||'-'}</td>
+            <td class="p-3 text-right">
+                <button onclick="adminEditEquipment(${e.id})" class="text-blue-500 hover:text-blue-700 mr-3 font-bold">Edit</button>
+                <button onclick="adminDeleteEquipment(${e.id})" class="text-red-400 hover:text-red-600 font-bold">✕</button>
+            </td>
+        </tr>`).join('');
+}
+function adminSaveEquipment() {
+    const name = document.getElementById('adminEquipName').value;
+    const bid = parseInt(document.getElementById('adminEquipLoc').value);
+    const id = document.getElementById('adminEquipId').value;
+    if(name && bid) {
+        if(id) {
+            const e = equipment.find(x => x.id == id);
+            if(e) { e.name = name; e.building_id = bid; }
+        } else {
+            equipment.push({ id: Date.now(), name: name, building_id: bid });
+        }
+        renderAdminEquipment(); renderAdminLocations(); adminCancelEquipment();
+    }
+}
+function adminEditEquipment(id) {
+    const e = equipment.find(x => x.id === id);
+    document.getElementById('adminEquipName').value = e.name;
+    document.getElementById('adminEquipLoc').value = e.building_id;
+    document.getElementById('adminEquipId').value = e.id;
+    
+    const btn = document.getElementById('btnSaveEquip');
+    btn.textContent = 'Update';
+    btn.classList.replace('bg-purple-600', 'bg-orange-500');
+    document.getElementById('btnCancelEquip').classList.remove('hidden');
+}
+function adminCancelEquipment() {
+    document.getElementById('adminEquipName').value = '';
+    document.getElementById('adminEquipId').value = '';
+    const btn = document.getElementById('btnSaveEquip');
+    btn.textContent = 'Add Item';
+    btn.classList.replace('bg-orange-500', 'bg-purple-600');
+    document.getElementById('btnCancelEquip').classList.add('hidden');
+}
+function adminDeleteEquipment(id) { 
+    Swal.fire({ title: 'Delete Item?', text: 'Cannot undo', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(res => {
+        if(res.isConfirmed) { equipment = equipment.filter(e => e.id !== id); renderAdminEquipment(); renderAdminLocations(); }
+    });
+}
+
+// 5. Reporters Management
+function renderAdminReporters() {
+    document.querySelector('#adminReporterTable tbody').innerHTML = reporters.map(r => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+            <td class="p-3 text-gray-700 font-medium">${r}</td>
+            <td class="p-3 text-right">
+                <button onclick="adminEditReporter('${r}')" class="text-blue-500 hover:text-blue-700 mr-3 font-bold">Edit</button>
+                <button onclick="adminDeleteReporter('${r}')" class="text-red-400 hover:text-red-600 font-bold">✕</button>
+            </td>
+        </tr>`).join('');
+}
+function adminSaveReporter() {
+    const name = document.getElementById('adminReporterName').value;
+    const oldName = document.getElementById('adminReporterOldName').value;
+    if(name) {
+        if(oldName) {
+            const idx = reporters.indexOf(oldName);
+            if(idx !== -1) reporters[idx] = name;
+            records.forEach(r => { if(r.reporter === oldName) r.reporter = name; });
+        } else {
+            reporters.push(name);
+        }
+        renderAdminReporters(); adminCancelReporter();
+    }
+}
+function adminEditReporter(name) {
+    document.getElementById('adminReporterName').value = name;
+    document.getElementById('adminReporterOldName').value = name;
+    const btn = document.getElementById('btnSaveReporter');
+    btn.textContent = 'Update';
+    btn.classList.replace('bg-blue-600', 'bg-orange-500');
+    document.getElementById('btnCancelReporter').classList.remove('hidden');
+}
+function adminCancelReporter() {
+    document.getElementById('adminReporterName').value = '';
+    document.getElementById('adminReporterOldName').value = '';
+    const btn = document.getElementById('btnSaveReporter');
+    btn.textContent = 'Add';
+    btn.classList.replace('bg-orange-500', 'bg-blue-600');
+    document.getElementById('btnCancelReporter').classList.add('hidden');
+}
+function adminDeleteReporter(name) { reporters = reporters.filter(r => r !== name); renderAdminReporters(); }
+
+
+// --- Forms ---
+function loadEditForm(id) { 
+    const r = records.find(x => x.id === id);
+    if(!r) return;
+    loadAddRecordForm(); showPage('addRecord');
+    document.getElementById('formTitle').innerText = 'Edit Record';
+    document.getElementById('editRecordId').value = r.id;
+    document.getElementById('saveBtn').innerText = 'Update';
+    
+    // Fill
+    const bObj = buildings.find(b => b.name === r.building);
+    if(bObj) { document.getElementById('buildingSelect').value = bObj.id; updateEquipmentOptions(); document.getElementById('equipmentSelect').value = r.equipment_name; }
+    document.getElementById('serviceType').value = r.type; toggleServiceFields();
+    document.getElementById('serviceDate').value = r.service_date;
+    if(r.next_service_date) document.getElementById('nextServiceDate').value = r.next_service_date;
+    document.getElementById('maintenanceCost').value = r.maintenance_cost;
+    document.getElementById('technicianSelect').value = r.technicians[0] || '';
+    document.getElementById('reporterSelect').value = r.reporter || '';
+    document.getElementById('recordStatus').value = r.calendar_status || 'pending';
+    if(r.po_file) document.getElementById('existingPoLabel').classList.remove('hidden');
+}
+
+function loadAddRecordForm() { 
+    document.getElementById('addRecordForm').reset();
+    document.getElementById('editRecordId').value = '';
+    tempPoFile = null;
+    document.getElementById('existingPoLabel').classList.add('hidden');
+    document.getElementById('formTitle').innerText = 'New Record';
+    document.getElementById('saveBtn').innerText = 'Save Record';
+    
+    const bSel = document.getElementById('buildingSelect');
+    bSel.innerHTML = '<option value="">Select location</option>' + buildings.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+    const tSel = document.getElementById('technicianSelect');
+    tSel.innerHTML = '<option value="">Select Company</option>' + technicians.map(t => `<option value="${t}">${t}</option>`).join('');
+    const rSel = document.getElementById('reporterSelect');
+    rSel.innerHTML = '<option value="">Select Reporter</option>' + reporters.map(r => `<option value="${r}">${r}</option>`).join('');
+}
+
+function updateEquipmentOptions() { 
+    const bid = parseInt(document.getElementById('buildingSelect').value);
+    const eqSel = document.getElementById('equipmentSelect');
+    eqSel.innerHTML = '<option value="">Select equipment</option>';
+    if(bid) equipment.filter(e => e.building_id === bid).forEach(e => { eqSel.innerHTML += `<option value="${e.name}">${e.name}</option>`; });
+}
+function toggleServiceFields() { 
+    const t = document.getElementById('serviceType').value;
+    document.getElementById('nextServiceDateContainer').classList.toggle('hidden', t !== 'calibration');
+}
+function handleSaveRecord(e) { 
+    e.preventDefault();
+    const editId = document.getElementById('editRecordId').value;
+    const bSel = document.getElementById('buildingSelect');
+    const buildingName = bSel.options[bSel.selectedIndex].text;
+    const recordData = {
+        equipment_name: document.getElementById('equipmentSelect').value,
+        building: buildingName,
+        type: document.getElementById('serviceType').value,
+        service_date: document.getElementById('serviceDate').value,
+        next_service_date: document.getElementById('nextServiceDate').value,
+        maintenance_cost: document.getElementById('maintenanceCost').value,
+        technicians: [document.getElementById('technicianSelect').value],
+        reporter: document.getElementById('reporterSelect').value,
+        calendar_status: document.getElementById('recordStatus').value
+    };
+    
+    if(editId) {
+        const index = records.findIndex(r => r.id == editId);
+        if(index !== -1) {
+            records[index] = { ...records[index], ...recordData };
+            if(tempPoFile) { records[index].po_file = tempPoFile.name; poFiles[editId] = tempPoFile; }
+            Swal.fire({title: 'Updated', icon: 'success', confirmButtonColor: '#3b82f6'});
+        }
+    } else {
+        const newId = Date.now();
+        const newRec = { id: newId, ...recordData, po_file: tempPoFile ? tempPoFile.name : '' };
+        if(tempPoFile) poFiles[newId] = tempPoFile;
+        records.push(newRec);
+        Swal.fire({title: 'Saved', icon: 'success', confirmButtonColor: '#3b82f6'});
+    }
+    showPage('records');
+}
+
+function deleteRecord(id) { 
+    Swal.fire({ title: 'Delete?', text: 'Cannot undo', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(res => {
+        if(res.isConfirmed) { records = records.filter(r => r.id !== id); loadRecords(); updateDashboardCards(); }
+    });
+}
+function viewPO(id) { 
+    const modal = document.getElementById('poViewerModal');
+    const fileInfo = poFiles[id];
+    const preview = document.getElementById('poPdfPreviewArea');
+    if(fileInfo && fileInfo.data) preview.innerHTML = `<iframe src="${fileInfo.data}" width="100%" height="100%" style="border:none;border-radius:12px;"></iframe>`;
+    else preview.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400">File not found (Demo Only)</div>';
+    modal.classList.remove('hidden');
+}
+function closePOViewerModal() { document.getElementById('poViewerModal').classList.add('hidden'); }
+
+function exportToPDF() { 
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF('l');
+    doc.setFontSize(18); doc.setTextColor(40); doc.text('Lab Maintenance Report', 14, 20);
+    doc.setFontSize(10); doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+    
+    // UPDATED: Added 'Reporter' column
+    const tableColumn = ["Equipment", "Type", "Date", "Cost", "Company", "Reporter", "Status"];
+    
+    const tableRows = filteredRecords.map(r => [ 
+        r.equipment_name, r.type, r.service_date, 
+        r.maintenance_cost ? parseFloat(r.maintenance_cost).toLocaleString() : '-', 
+        r.technicians[0] || '', 
+        r.reporter || '', // Added Reporter Data
+        r.calendar_status 
+    ]);
+
+    doc.autoTable({ 
+        head: [tableColumn], body: tableRows, startY: 35, theme: 'grid', 
+        headStyles: { fillColor: [66, 133, 244], fontSize: 10 }, 
+        styles: { fontSize: 9, cellPadding: 4 } 
+    });
+    doc.save('report.pdf');
+}
+
+function exportToExcel() {
+    // UPDATED: Added all columns
+    const ws = XLSX.utils.json_to_sheet(filteredRecords.map(r => ({
+        "Equipment Name": r.equipment_name,
+        "Location": r.building,
+        "Type": r.type,
+        "Date": r.service_date,
+        "Next Due": r.next_service_date || '-',
+        "Cost": parseFloat(r.maintenance_cost || 0),
+        "Company": r.technicians[0] || '',
+        "Reporter": r.reporter || '',
+        "Status": r.calendar_status,
+        "PO File": r.po_file || ''
+    })));
+
+    const wb = XLSX.utils.book_new(); 
+    XLSX.utils.book_append_sheet(wb, ws, "Records");
+    XLSX.writeFile(wb, "lab_records.xlsx");
+}
+</script>
+</body>
+</html>
