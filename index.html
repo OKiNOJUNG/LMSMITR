@@ -150,6 +150,7 @@
         }
         .bg-repair { background: linear-gradient(135deg, #f97316, #fb923c); }
         .bg-calib { background: linear-gradient(135deg, #9333ea, #c084fc); }
+        .bg-pm { background: linear-gradient(135deg, #0d9488, #2dd4bf); } /* Teal for PM */
     </style>
 </head>
 <body class="text-gray-800 antialiased selection:bg-blue-500 selection:text-white">
@@ -255,6 +256,7 @@
                                 <option value="">All Types</option>
                                 <option value="repair">Repair</option>
                                 <option value="calibration">Calibration</option>
+                                <option value="pm">PM</option>
                             </select>
                         </div>
 
@@ -349,6 +351,7 @@
                         <option value="">All Types</option>
                         <option value="repair">Repair</option>
                         <option value="calibration">Calibration</option>
+                        <option value="pm">PM</option>
                     </select>
                     <div class="flex gap-2">
                         <select id="filterMonth" onchange="applyFilters()" class="glass-input px-4 py-2.5 rounded-xl text-sm">
@@ -423,6 +426,7 @@
                                 <select id="serviceType" required onchange="toggleServiceFields()" class="w-full glass-input px-4 py-3 rounded-xl">
                                     <option value="repair">Repair</option>
                                     <option value="calibration">Calibration</option>
+                                    <option value="pm">PM</option>
                                 </select>
                             </div>
                             <div class="space-y-1">
@@ -450,7 +454,6 @@
                                 <select id="recordStatus" class="w-full glass-input px-4 py-3 rounded-xl">
                                     <option value="pending">Pending</option>
                                     <option value="complete">Complete</option>
-                                    <option value="ignored">Ignored</option>
                                 </select>
                             </div>
                             <div class="space-y-1 md:col-span-2">
@@ -526,11 +529,11 @@
 
                     <div class="glass ios-card p-6">
                         <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                            <span class="w-2 h-2 rounded-full bg-orange-500"></span> Companies
+                            <span class="w-2 h-2 rounded-full bg-orange-500"></span> Providers
                         </h3>
                         <div class="flex gap-2 mb-4">
                             <input type="hidden" id="adminCompOldName">
-                            <input type="text" id="adminCompName" placeholder="New Company Name" class="glass-input w-full p-2 rounded-lg text-sm">
+                            <input type="text" id="adminCompName" placeholder="New Provider Name" class="glass-input w-full p-2 rounded-lg text-sm">
                             <button onclick="adminSaveCompany()" id="btnSaveComp" class="ios-btn bg-blue-600 text-white px-4 py-2 text-sm shadow-md">Add</button>
                             <button onclick="adminCancelCompany()" id="btnCancelComp" class="hidden text-gray-500 px-2 text-sm font-bold">✕</button>
                         </div>
@@ -702,7 +705,12 @@ function formatCurrency(num) {
 function generateSampleData() {
     const today = new Date();
     for(let i=1; i<=40; i++) {
-        const type = i % 3 === 0 ? 'calibration' : 'repair';
+        // 0: calibration, 1: repair, 2: pm
+        const typeNum = i % 3;
+        let type = 'repair';
+        if(typeNum === 0) type = 'calibration';
+        else if(typeNum === 2) type = 'pm';
+
         const cost = (Math.floor(Math.random() * 40) + 5) * 1000;
         const eqItem = equipment[i % equipment.length];
         const bItem = buildings.find(b=>b.id === eqItem.building_id);
@@ -749,13 +757,11 @@ function showPage(page) {
 
 // --- Dashboard ---
 
-// [NEW] Updated loadDashboard to include filters
 function loadDashboard() {
     initDashboardFilters(); 
     updateDashboard(); 
 }
 
-// [NEW] Filter Initialization
 function initDashboardFilters() {
     const populate = (id, list) => {
         const el = document.getElementById(id);
@@ -774,7 +780,6 @@ function initDashboardFilters() {
     populate('dashFilterRep', reporters);
 }
 
-// [NEW] Main Filter Logic
 function updateDashboard() {
     const fLoc = document.getElementById('dashFilterLoc').value;
     const fEquip = document.getElementById('dashFilterEquip').value;
@@ -806,7 +811,6 @@ function clearDashboardFilters() {
     updateDashboard();
 }
 
-// [NEW] Updated Cards to accept data
 function updateDashboardCards(data) {
     const sourceData = data || records; 
 
@@ -819,7 +823,7 @@ function updateDashboardCards(data) {
     const upcoming = sourceData.filter(r => {
         let checkDate = null;
         if (r.type === 'calibration' && r.next_service_date) checkDate = new Date(r.next_service_date);
-        else if (r.type === 'repair' && r.service_date) checkDate = new Date(r.service_date);
+        else if ((r.type === 'repair' || r.type === 'pm') && r.service_date) checkDate = new Date(r.service_date);
         if (checkDate) return checkDate >= today && checkDate <= next30;
         return false;
     }).length;
@@ -840,12 +844,12 @@ function renderCalendar() {
     
     for(let day=1; day<=daysInMonth; day++) {
         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-        const items = records.filter(r => (r.type==='repair' && r.service_date===dateStr) || (r.type==='calibration' && r.next_service_date===dateStr));
+        const items = records.filter(r => (r.type !== 'calibration' && r.service_date===dateStr) || (r.type==='calibration' && r.next_service_date===dateStr));
         const isToday = new Date().toISOString().split('T')[0] === dateStr;
         
         let html = `<div class="text-right text-xs font-bold ${isToday?'text-blue-600':'text-gray-400'} mb-1">${day}</div>`;
         items.slice(0,3).forEach(i => {
-            const bgClass = i.type === 'repair' ? 'bg-repair' : 'bg-calib';
+            const bgClass = i.type === 'repair' ? 'bg-repair' : (i.type === 'pm' ? 'bg-pm' : 'bg-calib');
             const opacity = i.calendar_status === 'complete' ? 'opacity-50' : 'opacity-100';
             html += `<div class="cal-event-chip ${bgClass} ${opacity}">${i.equipment_name.substring(0,8)}..</div>`;
         });
@@ -858,13 +862,11 @@ function renderCalendar() {
     }
 }
 
-f// แทนที่ฟังก์ชัน openCalendarDay เดิมด้วยอันนี้
 function openCalendarDay(dateStr, items) {
     if(items.length === 0) return;
     const content = document.getElementById('calendarModalContent');
     const modalTitle = document.getElementById('modalDateTitle');
     
-    // จัดรูปแบบวันที่ส่วนหัวให้สวยงาม
     const dateObj = new Date(dateStr);
     modalTitle.innerHTML = `
         <div class="flex flex-col">
@@ -875,30 +877,28 @@ function openCalendarDay(dateStr, items) {
         </div>
     `;
     
-    // สร้าง HTML สำหรับแต่ละรายการ
     content.innerHTML = items.map(i => {
-        // Logic สำหรับสีและไอคอน
         const isComplete = i.calendar_status === 'complete';
-        const isIgnored = i.calendar_status === 'ignored';
         
-        // สีแถบข้างและ Badge
         let statusColor = 'bg-yellow-500'; // Default Pending
         let statusBadgeClass = 'text-yellow-700 bg-yellow-50 border-yellow-200';
         
         if (isComplete) {
             statusColor = 'bg-green-500';
             statusBadgeClass = 'text-green-700 bg-green-50 border-green-200';
-        } else if (isIgnored) {
-            statusColor = 'bg-gray-400';
-            statusBadgeClass = 'text-gray-500 bg-gray-100 border-gray-200';
         }
 
-        // Logic ประเภทงาน
-        const isRepair = i.type === 'repair';
-        const typeIcon = isRepair ? '🔧' : '⚖️';
-        const typeStyle = isRepair ? 'text-orange-600 bg-orange-50' : 'text-purple-600 bg-purple-50';
+        let typeIcon = '🔧';
+        let typeStyle = 'text-orange-600 bg-orange-50';
+        
+        if (i.type === 'calibration') {
+            typeIcon = '⚖️';
+            typeStyle = 'text-purple-600 bg-purple-50';
+        } else if (i.type === 'pm') {
+            typeIcon = '🛡️';
+            typeStyle = 'text-teal-600 bg-teal-50';
+        }
 
-        // ปุ่ม PO
         const poBtn = i.po_file ? 
             `<button onclick="viewPO(${i.id})" class="text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 flex items-center gap-1 transition shadow-sm">
                 📄 View PDF
@@ -961,12 +961,8 @@ function openCalendarDay(dateStr, items) {
                         ${isComplete ? '✓ Completed' : 'Mark Complete'}
                     </button>
                     
-                    <button onclick="updateCalStatus(${i.id}, 'pending')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border ${!isComplete && !isIgnored ? 'bg-yellow-500 text-white border-yellow-500 shadow-md shadow-yellow-200' : 'bg-white text-gray-600 border-gray-200 hover:border-yellow-500 hover:text-yellow-600'}">
+                    <button onclick="updateCalStatus(${i.id}, 'pending')" class="flex-1 py-2 rounded-xl text-xs font-bold transition-all border ${!isComplete ? 'bg-yellow-500 text-white border-yellow-500 shadow-md shadow-yellow-200' : 'bg-white text-gray-600 border-gray-200 hover:border-yellow-500 hover:text-yellow-600'}">
                         Pending
-                    </button>
-                    
-                     <button onclick="updateCalStatus(${i.id}, 'ignored')" class="w-9 flex items-center justify-center rounded-xl text-xs font-bold transition-all border border-gray-200 bg-white text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200" title="Ignore / Remove">
-                        ✕
                     </button>
                 </div>
             </div>
@@ -974,7 +970,6 @@ function openCalendarDay(dateStr, items) {
         `;
     }).join('');
     
-    // แสดง Modal
     document.getElementById('calendarModal').classList.remove('hidden');
 }
 
@@ -990,7 +985,6 @@ function nextMonth() { currentCalendarMonth.setMonth(currentCalendarMonth.getMon
 
 // --- Charts ---
 
-// [NEW] Updated Charts to accept data
 function renderCharts(data) {
     const sourceData = data || records;
 
@@ -1001,10 +995,14 @@ function renderCharts(data) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const repairData = new Array(12).fill(0);
     const calibData = new Array(12).fill(0);
+    const pmData = new Array(12).fill(0);
+
     sourceData.forEach(r => {
         const d = new Date(r.service_date);
         if(d.getFullYear() === currentCalendarMonth.getFullYear()) {
-             if(r.type==='repair') repairData[d.getMonth()]++; else calibData[d.getMonth()]++;
+             if(r.type==='repair') repairData[d.getMonth()]++;
+             else if(r.type==='pm') pmData[d.getMonth()]++;
+             else calibData[d.getMonth()]++;
         }
     });
 
@@ -1015,7 +1013,8 @@ function renderCharts(data) {
         type: 'bar',
         data: { labels: months, datasets: [ 
             { label: 'Repairs', data: repairData, backgroundColor: '#fb923c', borderRadius: 4 }, 
-            { label: 'Calibrations', data: calibData, backgroundColor: '#c084fc', borderRadius: 4 } 
+            { label: 'Calibrations', data: calibData, backgroundColor: '#c084fc', borderRadius: 4 },
+            { label: 'PM', data: pmData, backgroundColor: '#14b8a6', borderRadius: 4 }
         ]},
         options: { 
             responsive: true, maintainAspectRatio: false, 
@@ -1026,9 +1025,11 @@ function renderCharts(data) {
 
     const totalRepairs = sourceData.filter(r => r.type === 'repair').length;
     const totalCalibs = sourceData.filter(r => r.type === 'calibration').length;
+    const totalPM = sourceData.filter(r => r.type === 'pm').length;
+
     charts.type = new Chart(document.getElementById('typeChart'), {
         type: 'doughnut',
-        data: { labels: ['Repair', 'Calibration'], datasets: [{ data: [totalRepairs, totalCalibs], backgroundColor: ['#fb923c', '#c084fc'], borderWidth: 0 }] },
+        data: { labels: ['Repair', 'Calibration', 'PM'], datasets: [{ data: [totalRepairs, totalCalibs, totalPM], backgroundColor: ['#fb923c', '#c084fc', '#14b8a6'], borderWidth: 0 }] },
         options: { responsive: true, maintainAspectRatio: false, cutout: '70%', animation: { duration: 500 } }
     });
 
@@ -1074,14 +1075,18 @@ function renderRecordsTable() {
     pageData.forEach((r, i) => {
         let statusBadge = r.calendar_status === 'complete' ? 
             '<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Complete</span>' : 
-            (r.calendar_status === 'ignored' ? '<span class="bg-gray-200 text-gray-500 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Ignored</span>' : '<span class="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Pending</span>');
+            '<span class="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Pending</span>';
         let poBtn = r.po_file ? `<button onclick="viewPO(${r.id})" class="text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md">VIEW</button>` : '<span class="text-gray-300">-</span>';
+
+        let typeColor = 'bg-orange-400';
+        if(r.type === 'calibration') typeColor = 'bg-purple-400';
+        if(r.type === 'pm') typeColor = 'bg-teal-400';
 
         const tr = document.createElement('tr');
         tr.className = "group";
         tr.innerHTML = `
             <td class="px-6 py-4"><div class="font-semibold text-gray-800">${r.equipment_name}</div><div class="text-[10px] text-gray-400 font-bold uppercase tracking-wide">${r.building||'N/A'}</div></td>
-            <td class="px-6 py-4"><span class="w-2 h-2 rounded-full inline-block mr-2 ${r.type==='repair'?'bg-orange-400':'bg-purple-400'}"></span><span class="text-sm text-gray-600 capitalize">${r.type}</span></td>
+            <td class="px-6 py-4"><span class="w-2 h-2 rounded-full inline-block mr-2 ${typeColor}"></span><span class="text-sm text-gray-600 capitalize">${r.type}</span></td>
             <td class="px-6 py-4 text-gray-500 font-mono text-xs">${r.service_date}</td>
             <td class="px-6 py-4 text-right font-medium text-gray-700">${formatCurrency(r.maintenance_cost)}</td>
             <td class="px-6 py-4 text-gray-500 text-xs max-w-[150px] truncate">${r.technicians[0] || '-'}</td>
@@ -1135,7 +1140,7 @@ function importData(input) {
     input.value = '';
 }
 
-// --- Admin Funcs (Complete with all sections) ---
+// --- Admin Funcs ---
 
 function loadSettings() {
     renderAdminUsers();
@@ -1176,7 +1181,7 @@ function adminSaveLocation() {
 }
 function adminDeleteLocation(id) { buildings = buildings.filter(b => b.id !== id); renderAdminLocations(); }
 
-// 3. Company
+// 3. Provider (Formerly Company)
 function renderAdminCompanies() {
     document.querySelector('#adminCompanyTable tbody').innerHTML = technicians.map(t => `
         <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 text-gray-700">${t}</td>
@@ -1319,7 +1324,7 @@ function loadAddRecordForm() {
     const bSel = document.getElementById('buildingSelect');
     bSel.innerHTML = '<option value="">Select location</option>' + buildings.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
     const tSel = document.getElementById('technicianSelect');
-    tSel.innerHTML = '<option value="">Select Company</option>' + technicians.map(t => `<option value="${t}">${t}</option>`).join('');
+    tSel.innerHTML = '<option value="">Select Provider</option>' + technicians.map(t => `<option value="${t}">${t}</option>`).join('');
     const rSel = document.getElementById('reporterSelect');
     rSel.innerHTML = '<option value="">Select Reporter</option>' + reporters.map(r => `<option value="${r}">${r}</option>`).join('');
 }
@@ -1390,7 +1395,7 @@ function exportToPDF() {
     doc.setFontSize(10); doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
     
     // UPDATED: Added 'Reporter' column
-    const tableColumn = ["Equipment", "Type", "Date", "Cost", "Company", "Reporter", "Status"];
+    const tableColumn = ["Equipment", "Type", "Date", "Cost", "Provider", "Reporter", "Status"];
     
     const tableRows = filteredRecords.map(r => [ 
         r.equipment_name, r.type, r.service_date, 
@@ -1417,7 +1422,7 @@ function exportToExcel() {
         "Date": r.service_date,
         "Next Due": r.next_service_date || '-',
         "Cost": parseFloat(r.maintenance_cost || 0),
-        "Company": r.technicians[0] || '',
+        "Provider": r.technicians[0] || '',
         "Reporter": r.reporter || '',
         "Status": r.calendar_status,
         "PO File": r.po_file || ''
