@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LMS - Liquid Glass Edition</title>
+    <title>LMS - Lab Management System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -166,8 +167,8 @@
             
             <div class="text-center mb-10 relative z-10">
                 <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center shadow-lg mb-4 text-3xl">🧪</div>
-                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">Lab Manager</h1>
-                <p class="text-gray-500 mt-2 font-medium">Equipment Management System</p>
+                <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">Lab Management System</h1>
+                <p class="text-gray-500 mt-2 font-medium">Repair Calibrate PM</p>
             </div>
             
             <form id="loginForm" class="space-y-6 relative z-10">
@@ -193,7 +194,7 @@
                 <div class="flex items-center gap-6">
                     <div class="flex items-center gap-2">
                         <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white text-sm">LM</div>
-                        <span class="text-lg font-bold text-gray-800 hidden lg:inline tracking-tight">Lab Manager</span>
+                        <span class="text-lg font-bold text-gray-800 hidden lg:inline tracking-tight">Lab Management System</span>
                     </div>
                     
                     <div class="hidden md:flex bg-gray-100/50 p-1 rounded-xl gap-1">
@@ -222,7 +223,7 @@
             </div>
         </nav>
 
-        <div class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex-1 w-full max-w-[98%] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
             
             <div id="dashboardPage" class="page space-y-8">
                 <div class="glass p-5 rounded-2xl mb-6 flex flex-col gap-4">
@@ -299,18 +300,32 @@
                 </div>
 
                 <div class="glass ios-card p-8">
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                         <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><span class="bg-blue-500 w-2 h-6 rounded-full inline-block"></span> Schedule</h3>
-                        <div class="flex items-center gap-2 bg-gray-100/50 p-1 rounded-xl backdrop-blur-sm">
-                            <button onclick="previousMonth()" class="w-8 h-8 flex items-center justify-center hover:bg-white hover:shadow rounded-lg transition text-gray-600">❮</button>
-                            <span id="currentMonthYear" class="text-base font-bold min-w-[160px] text-center text-gray-800"></span>
-                            <button onclick="nextMonth()" class="w-8 h-8 flex items-center justify-center hover:bg-white hover:shadow rounded-lg transition text-gray-600">❯</button>
+                        
+                        <div class="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+                            <div class="flex bg-gray-200/50 p-1 rounded-xl">
+                                <button onclick="toggleScheduleView('calendar')" id="btnViewCalendar" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-600 shadow-sm transition">📅 Calendar</button>
+                                <button onclick="toggleScheduleView('list')" id="btnViewList" class="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-800 transition">📋 List</button>
+                            </div>
+
+                            <div class="flex items-center gap-2 bg-gray-100/50 p-1 rounded-xl backdrop-blur-sm">
+                                <button onclick="previousMonth()" class="w-8 h-8 flex items-center justify-center hover:bg-white hover:shadow rounded-lg transition text-gray-600">❮</button>
+                                <span id="currentMonthYear" class="text-base font-bold min-w-[140px] text-center text-gray-800"></span>
+                                <button onclick="nextMonth()" class="w-8 h-8 flex items-center justify-center hover:bg-white hover:shadow rounded-lg transition text-gray-600">❯</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-7 gap-4 mb-2 text-center text-gray-400 font-bold text-xs uppercase tracking-widest">
-                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    
+                    <div id="calendarContainer">
+                        <div class="grid grid-cols-7 gap-4 mb-2 text-center text-gray-400 font-bold text-xs uppercase tracking-widest">
+                            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                        </div>
+                        <div id="calendar" class="grid grid-cols-7 gap-3"></div>
                     </div>
-                    <div id="calendar" class="grid grid-cols-7 gap-3"></div>
+
+                    <div id="listContainer" class="hidden max-h-[500px] overflow-y-auto custom-scroll pr-2 space-y-3">
+                        </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -627,7 +642,23 @@
             <div class="flex-1 bg-gray-100 p-2" id="poPdfPreviewArea"></div>
         </div>
     </div>
-
+<div id="historyModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="glass glass-dark rounded-3xl shadow-2xl w-full max-w-3xl h-[75vh] flex flex-col overflow-hidden">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white/40">
+                <h3 id="historyModalTitle" class="text-xl font-bold text-gray-800">Equipment History</h3>
+                <button onclick="closeHistoryModal()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-500 font-bold transition">✕</button>
+            </div>
+            
+            <div class="flex gap-2 p-4 bg-white/50 border-b border-gray-100">
+                <button onclick="switchHistoryTab('repair')" id="tabHistRepair" class="hist-tab flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-orange-100 text-orange-700 transition shadow-sm">🔧 Repairs</button>
+                <button onclick="switchHistoryTab('calibration')" id="tabHistCalib" class="hist-tab flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-gray-100 text-gray-500 hover:bg-purple-100 hover:text-purple-700 transition">⚖️ Calibration</button>
+                <button onclick="switchHistoryTab('pm')" id="tabHistPM" class="hist-tab flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-gray-100 text-gray-500 hover:bg-teal-100 hover:text-teal-700 transition">🛡️ PM</button>
+            </div>
+            
+            <div id="historyModalContent" class="p-5 flex-1 overflow-y-auto bg-gray-50/50 custom-scroll space-y-3">
+                </div>
+        </div>
+    </div>
     <div id="calendarTooltip" class="cal-tooltip fixed bg-black/80 text-white text-xs p-2 rounded-lg z-[100] hidden pointer-events-none backdrop-blur-md"></div>
 
 <script>
@@ -837,21 +868,38 @@ function renderCalendar() {
     
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const calendar = document.getElementById('calendar');
-    calendar.innerHTML = '';
     
+    const calendar = document.getElementById('calendar');
+    const listContainer = document.getElementById('listContainer');
+    
+    calendar.innerHTML = '';
+    listContainer.innerHTML = '';
+    
+    let monthRecords = []; 
+
     for(let i=0; i<firstDay; i++) calendar.innerHTML += `<div></div>`;
     
     for(let day=1; day<=daysInMonth; day++) {
         const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         const items = records.filter(r => (r.type !== 'calibration' && r.service_date===dateStr) || (r.type==='calibration' && r.next_service_date===dateStr));
+        
+        if (items.length > 0) {
+            monthRecords.push({ date: dateStr, items: items }); 
+        }
+
         const isToday = new Date().toISOString().split('T')[0] === dateStr;
         
         let html = `<div class="text-right text-xs font-bold ${isToday?'text-blue-600':'text-gray-400'} mb-1">${day}</div>`;
+        
+        // จุดที่แก้ไข: ลบลูป forEach ที่ซ้อนกันซ้ำซากออก
         items.slice(0,3).forEach(i => {
             const bgClass = i.type === 'repair' ? 'bg-repair' : (i.type === 'pm' ? 'bg-pm' : 'bg-calib');
             const opacity = i.calendar_status === 'complete' ? 'opacity-50' : 'opacity-100';
-            html += `<div class="cal-event-chip ${bgClass} ${opacity}">${i.equipment_name.substring(0,8)}..</div>`;
+            
+            html += `<div class="cal-event-chip ${bgClass} ${opacity} whitespace-normal break-words leading-tight py-1.5 px-2 mb-1 border border-black/5">
+                        <span class="block">${i.equipment_name}</span>
+                        <span class="block text-[8.5px] opacity-90 mt-0.5 border-t border-white/20 pt-0.5">📍 ${i.building || 'N/A'}</span>
+                     </div>`;
         });
         
         const div = document.createElement('div');
@@ -860,8 +908,66 @@ function renderCalendar() {
         div.onclick = () => openCalendarDay(dateStr, items);
         calendar.appendChild(div);
     }
-}
 
+    if (monthRecords.length === 0) {
+        listContainer.innerHTML = `<div class="text-center text-gray-400 py-10 font-bold">No tasks scheduled for this month.</div>`;
+    } else {
+        monthRecords.forEach(group => {
+            const dateObj = new Date(group.date);
+            const dateDisplay = dateObj.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' });
+            
+            let listHtml = `<div class="mb-4">
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 border-b border-gray-100 pb-1">${dateDisplay}</div>
+                <div class="space-y-2">`;
+            
+            group.items.forEach(i => {
+                const isComplete = i.calendar_status === 'complete';
+                const statusColor = isComplete ? 'text-green-600 bg-green-50 border-green-200' : 'text-yellow-600 bg-yellow-50 border-yellow-200';
+                
+                let typeIcon = '🔧'; let typeText = 'text-orange-600';
+                if (i.type === 'calibration') { typeIcon = '⚖️'; typeText = 'text-purple-600'; } 
+                else if (i.type === 'pm') { typeIcon = '🛡️'; typeText = 'text-teal-600'; }
+
+                listHtml += `
+                    <div class="bg-white border border-gray-100 rounded-xl p-3 flex justify-between items-center hover:shadow-md transition cursor-pointer" onclick="openCalendarDay('${group.date}', ${JSON.stringify(group.items).replace(/"/g, '&quot;')})">
+                        <div class="flex items-center gap-3 overflow-hidden">
+                            <div class="text-xl ${typeText} opacity-80">${typeIcon}</div>
+                            <div>
+                                <div class="font-bold text-gray-800 text-sm truncate">${i.equipment_name}</div>
+                                <div class="text-[10px] text-gray-500 font-medium">📍 ${i.building || 'N/A'} | 🏢 ${i.technicians[0] || '-'}</div>
+                            </div>
+                        </div>
+                        <div class="text-[10px] font-bold uppercase tracking-wide border px-2 py-1 rounded-md ${statusColor}">
+                            ${i.calendar_status}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            listHtml += `</div></div>`;
+            listContainer.innerHTML += listHtml;
+        });
+    }
+}
+// ฟังก์ชันสลับมุมมอง
+function toggleScheduleView(viewType) {
+    const calContainer = document.getElementById('calendarContainer');
+    const listContainer = document.getElementById('listContainer');
+    const btnCal = document.getElementById('btnViewCalendar');
+    const btnList = document.getElementById('btnViewList');
+
+    if (viewType === 'calendar') {
+        calContainer.classList.remove('hidden');
+        listContainer.classList.add('hidden');
+        btnCal.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-600 shadow-sm transition';
+        btnList.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-800 transition';
+    } else {
+        calContainer.classList.add('hidden');
+        listContainer.classList.remove('hidden');
+        btnList.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-blue-600 shadow-sm transition';
+        btnCal.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-800 transition';
+    }
+}
 function openCalendarDay(dateStr, items) {
     if(items.length === 0) return;
     const content = document.getElementById('calendarModalContent');
@@ -992,6 +1098,11 @@ function renderCharts(data) {
     if(charts.type) charts.type.destroy();
     if(charts.loc) charts.loc.destroy();
 
+    // Register DataLabels Plugin globally for these charts
+    Chart.register(ChartDataLabels);
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = '#6b7280';
+
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     const repairData = new Array(12).fill(0);
     const calibData = new Array(12).fill(0);
@@ -1006,42 +1117,69 @@ function renderCharts(data) {
         }
     });
 
-    Chart.defaults.font.family = "'Inter', sans-serif";
-    Chart.defaults.color = '#6b7280';
+    const commonLabelOptions = {
+        color: '#4b5563',
+        font: { weight: 'bold', size: 10 },
+        formatter: (value) => value > 0 ? value : '', // ซ่อนค่าที่เป็น 0
+        anchor: 'end',
+        align: 'top',
+        offset: 2
+    };
 
+    // เปลี่ยนจาก Bar เป็น Line Chart
     charts.monthly = new Chart(document.getElementById('monthlyChart'), {
-        type: 'bar',
+        type: 'line', 
         data: { labels: months, datasets: [ 
-            { label: 'Repairs', data: repairData, backgroundColor: '#fb923c', borderRadius: 4 }, 
-            { label: 'Calibrations', data: calibData, backgroundColor: '#c084fc', borderRadius: 4 },
-            { label: 'PM', data: pmData, backgroundColor: '#14b8a6', borderRadius: 4 }
+            { label: 'Repairs', data: repairData, borderColor: '#fb923c', backgroundColor: 'rgba(251, 146, 60, 0.1)', borderWidth: 3, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 }, 
+            { label: 'Calibrations', data: calibData, borderColor: '#c084fc', backgroundColor: 'rgba(192, 132, 252, 0.1)', borderWidth: 3, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 },
+            { label: 'PM', data: pmData, borderColor: '#14b8a6', backgroundColor: 'rgba(20, 184, 166, 0.1)', borderWidth: 3, tension: 0.4, fill: true, pointRadius: 4, pointHoverRadius: 6 }
         ]},
         options: { 
             responsive: true, maintainAspectRatio: false, 
             scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } },
-            animation: { duration: 500 }
+            animation: { duration: 500 },
+            plugins: { datalabels: commonLabelOptions }
         }
     });
 
+    // ... (ส่วนของ charts.type doughnut คงไว้เหมือนเดิม) ...
     const totalRepairs = sourceData.filter(r => r.type === 'repair').length;
     const totalCalibs = sourceData.filter(r => r.type === 'calibration').length;
     const totalPM = sourceData.filter(r => r.type === 'pm').length;
+    const totalAll = totalRepairs + totalCalibs + totalPM;
 
     charts.type = new Chart(document.getElementById('typeChart'), {
         type: 'doughnut',
         data: { labels: ['Repair', 'Calibration', 'PM'], datasets: [{ data: [totalRepairs, totalCalibs, totalPM], backgroundColor: ['#fb923c', '#c084fc', '#14b8a6'], borderWidth: 0 }] },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '70%', animation: { duration: 500 } }
+        options: { 
+            responsive: true, maintainAspectRatio: false, cutout: '60%', animation: { duration: 500 },
+            plugins: {
+                datalabels: {
+                    color: '#ffffff', font: { weight: 'bold', size: 12 },
+                    formatter: (value) => value === 0 ? '' : ((value / totalAll) * 100).toFixed(1) + '%'
+                }
+            }
+        }
     });
 
-    const locLabels = buildings.map(b => b.name);
-    const locData = locLabels.map(name => sourceData.filter(r => r.building === name).length);
+    // ปรับ Data ของกราฟ Location ให้หั่นชื่ออาคารด้วยช่องว่าง (Split by Space) เพื่อ Wrap Text
+    const locLabels = buildings.map(b => b.name.split(' ')); // <-- จุดที่แก้ไข
+    const locData = locLabels.map((nameArr, index) => sourceData.filter(r => r.building === buildings[index].name).length);
+    
     charts.loc = new Chart(document.getElementById('locationChart'), {
         type: 'bar',
-        data: { labels: locLabels.map(l => l.substring(0, 10) + '..'), datasets: [{ label: 'Items', data: locData, backgroundColor: '#60a5fa', borderRadius: 6 }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { grid: { color: 'rgba(0,0,0,0.05)' } } }, animation: { duration: 500 } }
+        data: { labels: locLabels, datasets: [{ label: 'Items', data: locData, backgroundColor: '#60a5fa', borderRadius: 6 }] },
+        options: { 
+            responsive: true, maintainAspectRatio: false, 
+            scales: { 
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } }, // ย่อขนาดฟอนต์แกน X เล็กน้อยเพื่อไม่ให้เบียดกัน
+                y: { grid: { color: 'rgba(0,0,0,0.05)' } } 
+            }, 
+            animation: { duration: 500 },
+            plugins: { datalabels: commonLabelOptions }
+        }
     });
 }
-
 // --- Records Table ---
 function loadRecords() { applyFilters(); }
 function applyFilters() {
@@ -1076,7 +1214,8 @@ function renderRecordsTable() {
         let statusBadge = r.calendar_status === 'complete' ? 
             '<span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Complete</span>' : 
             '<span class="bg-yellow-100 text-yellow-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wide">Pending</span>';
-        let poBtn = r.po_file ? `<button onclick="viewPO(${r.id})" class="text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 px-2 py-1 rounded-md">VIEW</button>` : '<span class="text-gray-300">-</span>';
+        
+        let poBtn = r.po_file ? `<button onclick="viewPO(${r.id})" class="text-blue-600 hover:text-blue-800 text-xs font-bold bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg shadow-sm border border-blue-100 transition whitespace-nowrap">📄 VIEW PO</button>` : '<span class="text-gray-300">-</span>';
 
         let typeColor = 'bg-orange-400';
         if(r.type === 'calibration') typeColor = 'bg-purple-400';
@@ -1085,18 +1224,18 @@ function renderRecordsTable() {
         const tr = document.createElement('tr');
         tr.className = "group";
         tr.innerHTML = `
-            <td class="px-6 py-4"><div class="font-semibold text-gray-800">${r.equipment_name}</div><div class="text-[10px] text-gray-400 font-bold uppercase tracking-wide">${r.building||'N/A'}</div></td>
-            <td class="px-6 py-4"><span class="w-2 h-2 rounded-full inline-block mr-2 ${typeColor}"></span><span class="text-sm text-gray-600 capitalize">${r.type}</span></td>
-            <td class="px-6 py-4 text-gray-500 font-mono text-xs">${r.service_date}</td>
-            <td class="px-6 py-4 text-right font-medium text-gray-700">${formatCurrency(r.maintenance_cost)}</td>
-            <td class="px-6 py-4 text-gray-500 text-xs max-w-[150px] truncate">${r.technicians[0] || '-'}</td>
-            <td class="px-6 py-4 text-gray-500 text-xs">${r.reporter || '-'}</td>
-            <td class="px-6 py-4 text-center">${poBtn}</td>
-            <td class="px-6 py-4 text-center">${statusBadge}</td>
-            <td class="px-6 py-4 text-center">
-                <div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onclick="fullEditRecord(${r.id})" class="w-8 h-8 rounded-full bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-500 flex items-center justify-center transition">✏️</button>
-                    <button onclick="deleteRecord(${r.id})" class="w-8 h-8 rounded-full bg-red-50 hover:bg-red-500 hover:text-white text-red-500 flex items-center justify-center transition">✕</button>
+            <td class="px-4 py-4 min-w-[220px] break-words whitespace-normal"><div class="font-semibold text-gray-800">${r.equipment_name}</div><div class="text-[10px] text-gray-400 font-bold uppercase tracking-wide">${r.building||'N/A'}</div></td>
+            <td class="px-4 py-4 min-w-[120px]"><span class="w-2 h-2 rounded-full inline-block mr-2 ${typeColor}"></span><span class="text-sm text-gray-600 capitalize">${r.type}</span></td>
+            <td class="px-4 py-4 min-w-[110px] text-gray-500 font-mono text-xs">${r.service_date}</td>
+            <td class="px-4 py-4 min-w-[120px] text-right font-medium text-gray-700">฿${formatCurrency(r.maintenance_cost)}</td>
+            <td class="px-4 py-4 min-w-[180px] break-words whitespace-normal text-gray-600 text-xs">${r.technicians[0] || '-'}</td>
+            <td class="px-4 py-4 min-w-[150px] break-words whitespace-normal text-gray-600 text-xs">${r.reporter || '-'}</td>
+            <td class="px-4 py-4 min-w-[100px] text-center">${poBtn}</td>
+            <td class="px-4 py-4 min-w-[100px] text-center">${statusBadge}</td>
+            <td class="px-4 py-4 min-w-[100px] text-center">
+                <div class="flex items-center justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                    <button onclick="fullEditRecord(${r.id})" class="w-8 h-8 rounded-full bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-500 flex items-center justify-center transition shadow-sm">✏️</button>
+                    <button onclick="deleteRecord(${r.id})" class="w-8 h-8 rounded-full bg-red-50 hover:bg-red-500 hover:text-white text-red-500 flex items-center justify-center transition shadow-sm">✕</button>
                 </div>
             </td>
         `;
@@ -1115,11 +1254,16 @@ function clearFilters() {
 
 // --- Import / Backup ---
 function backupData() {
-    const data = JSON.stringify({users, records, technicians, reporters, buildings, equipment});
+    // เพิ่ม poFiles เข้าไปใน object ที่จะแปลงเป็น JSON
+    const data = JSON.stringify({users, records, technicians, reporters, buildings, equipment, poFiles});
     const blob = new Blob([data], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href=url; a.download='lab_backup.json'; a.click();
+    const a = document.createElement('a'); 
+    a.href = url; 
+    a.download = `lab_backup_${new Date().toISOString().split('T')[0]}.json`; 
+    a.click();
 }
+
 function importData(input) {
     const reader = new FileReader();
     reader.onload = e => {
@@ -1131,15 +1275,18 @@ function importData(input) {
             if(d.equipment) equipment = d.equipment;
             if(d.technicians) technicians = d.technicians;
             if(d.reporters) reporters = d.reporters;
+            if(d.poFiles) poFiles = d.poFiles; // สั่งให้ดึงไฟล์ PO กลับมาใช้งาน
+            
             Swal.fire({ title: 'Success', text: 'Data Imported', icon: 'success', timer: 1500, showConfirmButton: false }).then(() => {
                 loadSettings(); loadDashboard(); loadRecords();
             });
-        } catch(err) { Swal.fire('Error', 'Invalid JSON', 'error'); }
+        } catch(err) { 
+            Swal.fire('Error', 'Invalid JSON File', 'error'); 
+        }
     };
     reader.readAsText(input.files[0]);
     input.value = '';
 }
-
 // --- Admin Funcs ---
 
 function loadSettings() {
@@ -1154,45 +1301,155 @@ function loadSettings() {
 function renderAdminUsers() {
     document.querySelector('#adminUserTable tbody').innerHTML = Object.entries(users).map(([email, u]) => `
         <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 font-medium text-gray-700">${email}</td>
-        <td class="p-3 text-gray-500">${u.name}</td><td class="p-3 text-gray-500">${u.role}</td>
-        <td class="p-3 text-right"><button onclick="adminDeleteUser('${email}')" class="text-red-400 hover:text-red-600 font-bold">✕</button></td></tr>`).join('');
+        <td class="p-3 text-gray-500">${u.name}</td><td class="p-3 text-gray-500 uppercase text-xs font-bold">${u.role}</td>
+        <td class="p-3 text-right whitespace-nowrap">
+            <button onclick="adminEditUser('${email}')" class="text-blue-500 hover:text-blue-700 mr-3 font-bold">Edit</button>
+            <button onclick="adminDeleteUser('${email}')" class="text-red-400 hover:text-red-600 font-bold">✕</button>
+        </td></tr>`).join('');
 }
+
+function adminEditUser(email) {
+    const u = users[email];
+    const emailInput = document.getElementById('adminUserEmail');
+    emailInput.value = email;
+    emailInput.disabled = true; // ล็อกไม่ให้แก้ Email
+    emailInput.classList.add('opacity-50', 'cursor-not-allowed');
+    
+    document.getElementById('adminUserName').value = u.name;
+    document.getElementById('adminUserPass').value = u.password;
+    document.getElementById('adminUserRole').value = u.role;
+    
+    const btn = document.getElementById('btnSaveUser');
+    btn.textContent = 'Update';
+    btn.classList.replace('bg-purple-600', 'bg-orange-500');
+    document.getElementById('btnCancelUser').classList.remove('hidden');
+}
+
 function adminSaveUser() {
     const e = document.getElementById('adminUserEmail').value;
     const n = document.getElementById('adminUserName').value;
     const p = document.getElementById('adminUserPass').value;
     const r = document.getElementById('adminUserRole').value;
-    if(e && n && p) { users[e] = { name: n, password: p, role: r }; renderAdminUsers(); adminCancelUser(); }
+    if(e && n && p) { 
+        users[e] = { name: n, password: p, role: r }; 
+        renderAdminUsers(); 
+        adminCancelUser(); 
+    }
 }
-function adminCancelUser() {
-    document.getElementById('adminUserEmail').value = ''; document.getElementById('adminUserName').value = ''; document.getElementById('adminUserPass').value = '';
-}
-function adminDeleteUser(email) { if(email !== 'admin@lab.com') { delete users[email]; renderAdminUsers(); } }
 
+function adminCancelUser() {
+    const emailInput = document.getElementById('adminUserEmail');
+    emailInput.value = ''; 
+    emailInput.disabled = false;
+    emailInput.classList.remove('opacity-50', 'cursor-not-allowed');
+    
+    document.getElementById('adminUserName').value = ''; 
+    document.getElementById('adminUserPass').value = '';
+    
+    const btn = document.getElementById('btnSaveUser');
+    btn.textContent = 'Add';
+    btn.classList.replace('bg-orange-500', 'bg-purple-600');
+    document.getElementById('btnCancelUser').classList.add('hidden');
+}
+
+function adminDeleteUser(email) { if(email !== 'admin@lab.com') { delete users[email]; renderAdminUsers(); } }
 // 2. Location
 function renderAdminLocations() {
     document.querySelector('#adminLocationTable tbody').innerHTML = buildings.map(b => `
-        <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 text-gray-700">${b.name}</td>
-        <td class="p-3 text-right"><button onclick="adminDeleteLocation(${b.id})" class="text-red-400 font-bold">✕</button></td></tr>`).join('');
+        <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 text-gray-700 font-medium">${b.name}</td>
+        <td class="p-3 text-right whitespace-nowrap">
+            <button onclick="adminEditLocation(${b.id})" class="text-blue-500 hover:text-blue-700 mr-3 font-bold">Edit</button>
+            <button onclick="adminDeleteLocation(${b.id})" class="text-red-400 font-bold">✕</button>
+        </td></tr>`).join('');
 }
+
+function adminEditLocation(id) {
+    const b = buildings.find(x => x.id === id);
+    document.getElementById('adminLocName').value = b.name;
+    document.getElementById('adminLocId').value = b.id;
+    
+    const btn = document.getElementById('btnSaveLoc');
+    btn.textContent = 'Update';
+    btn.classList.replace('bg-blue-600', 'bg-orange-500');
+    document.getElementById('btnCancelLoc').classList.remove('hidden');
+}
+
 function adminSaveLocation() {
     const name = document.getElementById('adminLocName').value;
-    if(name) { buildings.push({ id: Date.now(), name }); renderAdminLocations(); document.getElementById('adminLocName').value=''; }
+    const id = document.getElementById('adminLocId').value;
+    if(name) { 
+        if (id) {
+            const b = buildings.find(x => x.id == id);
+            if (b) b.name = name;
+        } else {
+            buildings.push({ id: Date.now(), name }); 
+        }
+        renderAdminLocations(); 
+        adminCancelLocation(); 
+    }
 }
-function adminDeleteLocation(id) { buildings = buildings.filter(b => b.id !== id); renderAdminLocations(); }
 
+function adminCancelLocation() {
+    document.getElementById('adminLocName').value = '';
+    document.getElementById('adminLocId').value = '';
+    const btn = document.getElementById('btnSaveLoc');
+    btn.textContent = 'Add';
+    btn.classList.replace('bg-orange-500', 'bg-blue-600');
+    document.getElementById('btnCancelLoc').classList.add('hidden');
+}
+
+function adminDeleteLocation(id) { buildings = buildings.filter(b => b.id !== id); renderAdminLocations(); }
 // 3. Provider (Formerly Company)
 function renderAdminCompanies() {
     document.querySelector('#adminCompanyTable tbody').innerHTML = technicians.map(t => `
-        <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 text-gray-700">${t}</td>
-        <td class="p-3 text-right"><button onclick="adminDeleteCompany('${t}')" class="text-red-400 font-bold">✕</button></td></tr>`).join('');
+        <tr class="border-b border-gray-100 hover:bg-gray-50"><td class="p-3 text-gray-700 font-medium">${t}</td>
+        <td class="p-3 text-right whitespace-nowrap">
+            <button onclick="adminEditCompany('${t}')" class="text-blue-500 hover:text-blue-700 mr-3 font-bold">Edit</button>
+            <button onclick="adminDeleteCompany('${t}')" class="text-red-400 font-bold">✕</button>
+        </td></tr>`).join('');
 }
+
+function adminEditCompany(name) {
+    document.getElementById('adminCompName').value = name;
+    document.getElementById('adminCompOldName').value = name;
+    
+    const btn = document.getElementById('btnSaveComp');
+    btn.textContent = 'Update';
+    btn.classList.replace('bg-blue-600', 'bg-orange-500');
+    document.getElementById('btnCancelComp').classList.remove('hidden');
+}
+
 function adminSaveCompany() {
     const name = document.getElementById('adminCompName').value;
-    if(name) { technicians.push(name); renderAdminCompanies(); document.getElementById('adminCompName').value=''; }
+    const oldName = document.getElementById('adminCompOldName').value;
+    if(name) { 
+        if(oldName) {
+            const idx = technicians.indexOf(oldName);
+            if(idx !== -1) technicians[idx] = name;
+            // สั่งให้อัปเดตชื่อ Provider ในประวัติเก่าทั้งหมดให้อัตโนมัติ เพื่อความสม่ำเสมอของข้อมูล
+            records.forEach(r => { 
+                if(r.technicians.includes(oldName)) {
+                    r.technicians = [name];
+                }
+            });
+        } else {
+            technicians.push(name); 
+        }
+        renderAdminCompanies(); 
+        adminCancelCompany(); 
+    }
 }
-function adminDeleteCompany(name) { technicians = technicians.filter(t => t !== name); renderAdminCompanies(); }
 
+function adminCancelCompany() {
+    document.getElementById('adminCompName').value = '';
+    document.getElementById('adminCompOldName').value = '';
+    const btn = document.getElementById('btnSaveComp');
+    btn.textContent = 'Add';
+    btn.classList.replace('bg-orange-500', 'bg-blue-600');
+    document.getElementById('btnCancelComp').classList.add('hidden');
+}
+
+function adminDeleteCompany(name) { technicians = technicians.filter(t => t !== name); renderAdminCompanies(); }
 // 4. Equipment Inventory
 function renderAdminEquipment() {
     const locSelect = document.getElementById('adminEquipLoc');
@@ -1202,7 +1459,8 @@ function renderAdminEquipment() {
         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
             <td class="p-3 font-medium text-gray-700">${e.name}</td>
             <td class="p-3 text-gray-500 text-xs uppercase tracking-wide">${buildings.find(b=>b.id===e.building_id)?.name||'-'}</td>
-            <td class="p-3 text-right">
+            <td class="p-3 text-right whitespace-nowrap">
+                <button onclick="viewEquipmentHistory('${e.name}')" class="text-teal-600 hover:text-teal-800 mr-3 font-bold bg-teal-50 px-2 py-1 rounded text-xs">History</button>
                 <button onclick="adminEditEquipment(${e.id})" class="text-blue-500 hover:text-blue-700 mr-3 font-bold">Edit</button>
                 <button onclick="adminDeleteEquipment(${e.id})" class="text-red-400 hover:text-red-600 font-bold">✕</button>
             </td>
@@ -1300,7 +1558,6 @@ function loadEditForm(id) {
     document.getElementById('editRecordId').value = r.id;
     document.getElementById('saveBtn').innerText = 'Update';
     
-    // Fill
     const bObj = buildings.find(b => b.name === r.building);
     if(bObj) { document.getElementById('buildingSelect').value = bObj.id; updateEquipmentOptions(); document.getElementById('equipmentSelect').value = r.equipment_name; }
     document.getElementById('serviceType').value = r.type; toggleServiceFields();
@@ -1310,9 +1567,38 @@ function loadEditForm(id) {
     document.getElementById('technicianSelect').value = r.technicians[0] || '';
     document.getElementById('reporterSelect').value = r.reporter || '';
     document.getElementById('recordStatus').value = r.calendar_status || 'pending';
-    if(r.po_file) document.getElementById('existingPoLabel').classList.remove('hidden');
-}
+    
+    if(r.po_file) {
+        document.getElementById('existingPoLabel').classList.remove('hidden');
+        document.getElementById('existingPoLabel').innerHTML = `✓ แนบไฟล์แล้ว: <span class="text-gray-600">${r.po_file}</span> <button type="button" onclick="deleteAttachedPO(${r.id})" class="ml-3 px-2 py-0.5 bg-red-100 text-red-600 rounded hover:bg-red-200 transition text-[10px] uppercase font-bold tracking-wider">ลบไฟล์นี้</button>`;
+    } else {
+        document.getElementById('existingPoLabel').classList.add('hidden');
+        document.getElementById('existingPoLabel').innerHTML = '✓ Current file attached';
+    }
+} // จุดที่แก้ไข: เติมปีกกาปิดฟังก์ชันตรงนี้
 
+function deleteAttachedPO(recordId) {
+    Swal.fire({ 
+        title: 'Delete PO File?', 
+        text: 'การลบไฟล์จะลบออกจากระบบทันที คุณแน่ใจหรือไม่?', 
+        icon: 'warning', 
+        showCancelButton: true, 
+        confirmButtonColor: '#ef4444' 
+    }).then(res => {
+        if(res.isConfirmed) {
+            const r = records.find(x => x.id === recordId);
+            if(r) {
+                r.po_file = ''; 
+                delete poFiles[recordId]; 
+                document.getElementById('existingPoLabel').classList.add('hidden');
+                document.getElementById('poFileUpload').value = ''; 
+                tempPoFile = null;
+                Swal.fire({title: 'Deleted!', text: 'ลบไฟล์ PO เรียบร้อยแล้ว', icon: 'success', timer: 1500, showConfirmButton: false});
+                loadRecords(); 
+            }
+        }
+    });
+}
 function loadAddRecordForm() { 
     document.getElementById('addRecordForm').reset();
     document.getElementById('editRecordId').value = '';
@@ -1431,6 +1717,58 @@ function exportToExcel() {
     const wb = XLSX.utils.book_new(); 
     XLSX.utils.book_append_sheet(wb, ws, "Records");
     XLSX.writeFile(wb, "lab_records.xlsx");
+}
+// --- Equipment History Logic ---
+let currentHistoryEquip = '';
+
+function viewEquipmentHistory(equipName) {
+    currentHistoryEquip = equipName;
+    document.getElementById('historyModalTitle').innerText = `History: ${equipName}`;
+    document.getElementById('historyModal').classList.remove('hidden');
+    switchHistoryTab('repair'); // Default tab
+}
+
+function closeHistoryModal() {
+    document.getElementById('historyModal').classList.add('hidden');
+}
+
+function switchHistoryTab(type) {
+    // Reset tabs
+    document.querySelectorAll('.hist-tab').forEach(t => {
+        t.className = 'hist-tab flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-gray-100 text-gray-500 transition hover:bg-gray-200';
+    });
+    
+    // Active tab styling
+    if(type === 'repair') document.getElementById('tabHistRepair').className = 'hist-tab flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-orange-100 text-orange-700 transition shadow-sm';
+    if(type === 'calibration') document.getElementById('tabHistCalib').className = 'hist-tab flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-purple-100 text-purple-700 transition shadow-sm';
+    if(type === 'pm') document.getElementById('tabHistPM').className = 'hist-tab flex-1 px-4 py-2.5 rounded-xl text-sm font-bold bg-teal-100 text-teal-700 transition shadow-sm';
+
+    // Filter and sort records
+    const histRecords = records.filter(r => r.equipment_name === currentHistoryEquip && r.type === type)
+                               .sort((a,b) => new Date(b.service_date) - new Date(a.service_date));
+
+    const content = document.getElementById('historyModalContent');
+    if(histRecords.length === 0) {
+        content.innerHTML = `<div class="text-center text-gray-400 mt-10 font-medium flex flex-col items-center"><span class="text-3xl mb-2">📄</span>ไม่มีประวัติ ${type} สำหรับเครื่องมือนี้</div>`;
+        return;
+    }
+
+    content.innerHTML = histRecords.map(r => {
+        const statusColor = r.calendar_status === 'complete' ? 'text-green-600 bg-green-50' : 'text-yellow-600 bg-yellow-50';
+        return `
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center hover:shadow-md transition">
+            <div>
+                <div class="font-bold text-gray-800 text-base">${r.service_date}</div>
+                <div class="text-xs text-gray-500 mt-1 font-medium">Provider: <span class="text-gray-700">${r.technicians[0] || '-'}</span></div>
+                <div class="text-xs text-gray-500 font-medium">Reporter: <span class="text-gray-700">${r.reporter || '-'}</span></div>
+            </div>
+            <div class="text-right flex flex-col items-end">
+                <div class="font-mono font-bold text-gray-800 bg-gray-50 px-2 py-1 rounded-lg">฿${formatCurrency(r.maintenance_cost)}</div>
+                <div class="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-md mt-2 ${statusColor}">${r.calendar_status}</div>
+            </div>
+        </div>
+        `;
+    }).join('');
 }
 </script>
 </body>
