@@ -303,11 +303,11 @@
                         <div><p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Calibrations</p><h2 class="text-4xl font-bold text-purple-600" id="cardCalibrations">0</h2></div>
                         <div class="w-12 h-12 bg-purple-100/80 rounded-2xl flex items-center justify-center text-2xl shadow-sm">⚖️</div>
                     </div>
-                    <div class="glass ios-card p-6 flex justify-between items-center relative overflow-hidden">
-                        <div class="absolute right-0 top-0 w-24 h-24 bg-red-400/20 rounded-bl-full -mr-4 -mt-4"></div>
-                        <div><p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Next 30 Days</p><h2 class="text-4xl font-bold text-red-500" id="cardUpcoming">0</h2></div>
-                        <div class="w-12 h-12 bg-red-100/80 rounded-2xl flex items-center justify-center text-2xl shadow-sm">⏰</div>
-                    </div>
+                    <div class="glass ios-card p-6 flex justify-between items-center relative overflow-hidden cursor-pointer hover:bg-red-50/50 transition-colors" onclick="openUpcomingModal()">
+        <div class="absolute right-0 top-0 w-24 h-24 bg-red-400/20 rounded-bl-full -mr-4 -mt-4"></div>
+        <div><p class="text-gray-500 text-xs font-bold uppercase tracking-wider mb-1">Next 30 Days</p><h2 class="text-4xl font-bold text-red-500" id="cardUpcoming">0</h2></div>
+        <div class="w-12 h-12 bg-red-100/80 rounded-2xl flex items-center justify-center text-2xl shadow-sm">⏰</div>
+    </div>
                 </div>
 
                 <div class="glass ios-card p-8">
@@ -352,6 +352,11 @@
                  <div class="glass ios-card p-6">
                     <h3 class="text-lg font-bold text-gray-800 mb-6">Location Distribution</h3>
                     <div class="h-64"><canvas id="locationChart"></canvas></div>
+                </div>
+
+                <div class="glass ios-card p-6 mt-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-6">Maintenance Cost by Equipment</h3>
+                    <div class="h-80"><canvas id="costChart"></canvas></div>
                 </div>
             </div>
 
@@ -712,8 +717,14 @@ let filteredRecords = [];
 window.addEventListener('DOMContentLoaded', () => {
     if(records.length === 0) generateSampleData();
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    
+    // ตรวจสอบ Session คงค้าง
+    const savedEmail = localStorage.getItem('labUserSession');
+    if(savedEmail && users[savedEmail]) {
+        currentUser = { ...users[savedEmail], email: savedEmail };
+        initApp();
+    }
 });
-
 function initApp() {
     document.getElementById('loginPage').classList.add('hidden');
     document.getElementById('mainApp').classList.remove('hidden');
@@ -744,10 +755,10 @@ function formatCurrency(num) {
     return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
+// แก้ไขฟังก์ชัน generateSampleData (เพื่อให้ Mock ข้อมูลจำลองมีคนสร้างเป็น admin สลับกับ user)
 function generateSampleData() {
     const today = new Date();
     for(let i=1; i<=40; i++) {
-        // 0: calibration, 1: repair, 2: pm
         const typeNum = i % 3;
         let type = 'repair';
         if(typeNum === 0) type = 'calibration';
@@ -768,23 +779,98 @@ function generateSampleData() {
             reporter: reporters[i % reporters.length],
             maintenance_cost: cost.toString(),
             calendar_status: i % 5 === 0 ? 'complete' : 'pending',
-            po_file: i % 4 === 0 ? 'mock.pdf' : ''
+            po_file: i % 4 === 0 ? 'mock.pdf' : '',
+            created_by: (i % 2 === 0) ? 'admin@lab.com' : 'user@lab.com' // <-- จำลองอีเมลคนสร้าง
         });
         if(i % 4 === 0) poFiles[records[records.length-1].id] = { name: 'mock.pdf', data: '' };
     }
 }
+function openUpcomingModal() {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const next30 = new Date(today);
+    next30.setDate(today.getDate() + 30);
 
+    // แก้ไขจุดนี้: นำเงื่อนไขการกรองสถานะ complete ออก เพื่อให้ข้อมูลดึงมาแสดงผลตรงตามยอดบนการ์ดหน้า Dashboard
+    let upcomingRecords = records.filter(r => {
+        let checkDate = null;
+        if (r.type === 'calibration' && r.next_service_date) checkDate = new Date(r.next_service_date);
+        else if ((r.type === 'repair' || r.type === 'pm') && r.service_date) checkDate = new Date(r.service_date);
+        
+        if (checkDate) {
+            checkDate.setHours(0,0,0,0);
+            return checkDate >= today && checkDate <= next30;
+        }
+        return false;
+    });
+
+    // เรียงลำดับจากวันที่จะมาถึงก่อน (Ascending)
+    upcomingRecords.sort((a, b) => {
+        const dateA = new Date(a.type === 'calibration' ? a.next_service_date : a.service_date);
+        const dateB = new Date(b.type === 'calibration' ? b.next_service_date : b.service_date);
+        return dateA - dateB;
+    });
+
+    const content = document.getElementById('upcomingModalContent');
+    if(upcomingRecords.length === 0) {
+        content.innerHTML = `<div class="text-center text-gray-400 py-10 font-bold">No upcoming tasks in the next 30 days.</div>`;
+    } else {
+        content.innerHTML = upcomingRecords.map(r => {
+            const d = new Date(r.type === 'calibration' ? r.next_service_date : r.service_date);
+            const dateStr = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+            
+            let typeIcon = '🔧'; let typeColor = 'text-orange-600 bg-orange-50 border-orange-200';
+            if(r.type === 'calibration') { typeIcon = '⚖️'; typeColor = 'text-purple-600 bg-purple-50 border-purple-200'; }
+            else if(r.type === 'pm') { typeIcon = '🛡️'; typeColor = 'text-teal-600 bg-teal-50 border-teal-200'; }
+
+            // เพิ่มสไตล์และสถานะความคืบหน้าของงาน (Status Badge) เพื่อให้ตรวจสอบได้ว่างานไหนเสร็จหรือยังค้างอยู่
+            const isComplete = r.calendar_status === 'complete';
+            const statusBadgeClass = isComplete ? 'text-green-700 bg-green-50 border-green-200' : 'text-yellow-700 bg-yellow-50 border-yellow-200';
+            const opacityClass = isComplete ? 'opacity-60' : 'opacity-100';
+
+            return `
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition ${opacityClass}">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <div class="text-xs font-bold text-red-500 mb-1 flex items-center gap-1">🗓️ ${dateStr}</div>
+                        <h4 class="font-bold text-gray-800 text-base">${r.equipment_name}</h4>
+                        <div class="text-[10px] text-gray-400 font-bold uppercase tracking-wider mt-1">📍 ${r.building || 'N/A'}</div>
+                    </div>
+                    <div class="flex flex-col items-end gap-1.5">
+                        <span class="px-2 py-1 rounded border ${typeColor} text-[10px] font-bold uppercase shadow-sm">
+                            ${typeIcon} ${r.type}
+                        </span>
+                        <span class="px-2 py-0.5 rounded border ${statusBadgeClass} text-[9px] font-bold uppercase tracking-wide shadow-sm">
+                            ${r.calendar_status}
+                        </span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+    
+    document.getElementById('upcomingModal').classList.remove('hidden');
+}
+function closeUpcomingModal() {
+    document.getElementById('upcomingModal').classList.add('hidden');
+}
 function handleLogin(e) {
     e.preventDefault();
     const email = document.getElementById('loginEmail').value;
     const pwd = document.getElementById('loginPassword').value;
     if(users[email] && users[email].password === pwd) {
         currentUser = { ...users[email], email };
+        localStorage.setItem('labUserSession', email); // บันทึก Session
         initApp();
-    } else { Swal.fire({ title: 'Error', text: 'Invalid credentials', icon: 'error', confirmButtonColor: '#3b82f6' }); }
+    } else { 
+        Swal.fire({ title: 'Error', text: 'Invalid credentials', icon: 'error', confirmButtonColor: '#3b82f6' }); 
+    }
 }
-function logout() { currentUser = null; location.reload(); }
-
+function logout() { 
+    currentUser = null; 
+    localStorage.removeItem('labUserSession'); // ล้าง Session
+    location.reload(); 
+}
 function showPage(page) {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
     document.getElementById(page+'Page').classList.remove('hidden');
@@ -1190,6 +1276,78 @@ function renderCharts(data) {
             plugins: { datalabels: commonLabelOptions }
         }
     });
+if(charts.cost) charts.cost.destroy();
+
+    // 1. ดึงรายชื่ออุปกรณ์ที่ไม่ซ้ำกัน
+    const equipLabels = [...new Set(sourceData.map(r => r.equipment_name))];
+    
+    // 2. คำนวณค่าใช้จ่ายแต่ละประเภทของอุปกรณ์แต่ละตัว
+    const costRepair = equipLabels.map(eq => {
+        return sourceData.filter(r => r.equipment_name === eq && r.type === 'repair')
+                         .reduce((sum, r) => sum + (parseFloat(r.maintenance_cost) || 0), 0);
+    });
+    const costCalib = equipLabels.map(eq => {
+        return sourceData.filter(r => r.equipment_name === eq && r.type === 'calibration')
+                         .reduce((sum, r) => sum + (parseFloat(r.maintenance_cost) || 0), 0);
+    });
+    const costPM = equipLabels.map(eq => {
+        return sourceData.filter(r => r.equipment_name === eq && r.type === 'pm')
+                         .reduce((sum, r) => sum + (parseFloat(r.maintenance_cost) || 0), 0);
+    });
+
+    // 3. หั่นชื่ออุปกรณ์ด้วยช่องว่างเพื่อให้ข้อความขึ้นบรรทัดใหม่ได้สวยงาม
+    const wrapEquipLabels = equipLabels.map(name => name.split(' '));
+
+    charts.cost = new Chart(document.getElementById('costChart'), {
+        type: 'bar',
+        data: { 
+            labels: wrapEquipLabels, 
+            datasets: [ 
+                { label: 'Repair', data: costRepair, backgroundColor: '#fb923c', borderRadius: {topLeft: 0, topRight: 0, bottomLeft: 4, bottomRight: 4} }, 
+                { label: 'Calibration', data: costCalib, backgroundColor: '#c084fc', borderRadius: 0 },
+                { label: 'PM', data: costPM, backgroundColor: '#14b8a6', borderRadius: {topLeft: 4, topRight: 4, bottomLeft: 0, bottomRight: 0} }
+            ] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false,
+            scales: { 
+                x: { 
+                    stacked: true, // ทำให้กราฟซ้อนกันในแกน X
+                    grid: { display: false }, 
+                    ticks: { font: { size: 10 } } 
+                }, 
+                y: { 
+                    stacked: true, // ทำให้กราฟซ้อนกันในแกน Y
+                    beginAtZero: true, 
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: { callback: (value) => '฿' + value.toLocaleString() } // ใส่เครื่องหมายบาท
+                } 
+            }, 
+            animation: { duration: 500 },
+            plugins: { 
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) {
+                                label += '฿' + context.parsed.y.toLocaleString();
+                            }
+                            return label;
+                        }
+                    }
+                },
+                datalabels: {
+                    color: '#ffffff',
+                    font: { weight: 'bold', size: 9 },
+                    formatter: (value) => value > 0 ? value.toLocaleString() : '', // ซ่อน label ถ้าค่าเป็น 0
+                    anchor: 'center',
+                    align: 'center'
+                }
+            }
+        }
+    });
 }
 // --- Records Table ---
 function loadRecords() { applyFilters(); }
@@ -1232,6 +1390,19 @@ function renderRecordsTable() {
         if(r.type === 'calibration') typeColor = 'bg-purple-400';
         if(r.type === 'pm') typeColor = 'bg-teal-400';
 
+        // เช็คสิทธิ์: อนุญาตถ้าเป็น admin หรือ เป็นคนสร้าง Record นี้เอง
+        const canEdit = currentUser.role === 'admin' || r.created_by === currentUser.email;
+
+        let actionButtons = `<span class="text-xs text-gray-400 italic">View Only</span>`;
+        if (canEdit) {
+            actionButtons = `
+                <div class="flex items-center justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
+                    <button onclick="fullEditRecord(${r.id})" class="w-8 h-8 rounded-full bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-500 flex items-center justify-center transition shadow-sm">✏️</button>
+                    <button onclick="deleteRecord(${r.id})" class="w-8 h-8 rounded-full bg-red-50 hover:bg-red-500 hover:text-white text-red-500 flex items-center justify-center transition shadow-sm">✕</button>
+                </div>
+            `;
+        }
+
         const tr = document.createElement('tr');
         tr.className = "group";
         tr.innerHTML = `
@@ -1243,26 +1414,11 @@ function renderRecordsTable() {
             <td class="px-4 py-4 min-w-[150px] break-words whitespace-normal text-gray-600 text-xs">${r.reporter || '-'}</td>
             <td class="px-4 py-4 min-w-[100px] text-center">${poBtn}</td>
             <td class="px-4 py-4 min-w-[100px] text-center">${statusBadge}</td>
-            <td class="px-4 py-4 min-w-[100px] text-center">
-                <div class="flex items-center justify-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
-                    <button onclick="fullEditRecord(${r.id})" class="w-8 h-8 rounded-full bg-blue-50 hover:bg-blue-500 hover:text-white text-blue-500 flex items-center justify-center transition shadow-sm">✏️</button>
-                    <button onclick="deleteRecord(${r.id})" class="w-8 h-8 rounded-full bg-red-50 hover:bg-red-500 hover:text-white text-red-500 flex items-center justify-center transition shadow-sm">✕</button>
-                </div>
-            </td>
+            <td class="px-4 py-4 min-w-[100px] text-center">${actionButtons}</td>
         `;
         tbody.appendChild(tr);
     });
 }
-function prevPage() { if(currentPage > 1) { currentPage--; renderRecordsTable(); } }
-function nextPage() { if((currentPage * rowsPerPage) < filteredRecords.length) { currentPage++; renderRecordsTable(); } }
-function clearFilters() {
-    document.getElementById('filterSearch').value = '';
-    document.getElementById('filterType').value = '';
-    document.getElementById('filterMonth').value = '';
-    document.getElementById('filterYear').value = '';
-    applyFilters();
-}
-
 // --- Import / Backup ---
 function backupData() {
     // เพิ่ม poFiles เข้าไปใน object ที่จะแปลงเป็น JSON
@@ -1636,6 +1792,7 @@ function toggleServiceFields() {
     const t = document.getElementById('serviceType').value;
     document.getElementById('nextServiceDateContainer').classList.toggle('hidden', t !== 'calibration');
 }
+// อัปเดตฟังก์ชันตอนบันทึก (ให้แนบ Email คนสร้างไปด้วย)
 function handleSaveRecord(e) { 
     e.preventDefault();
     const editId = document.getElementById('editRecordId').value;
@@ -1662,14 +1819,14 @@ function handleSaveRecord(e) {
         }
     } else {
         const newId = Date.now();
-        const newRec = { id: newId, ...recordData, po_file: tempPoFile ? tempPoFile.name : '' };
+        // เพิ่มฟิลด์ created_by ตรงนี้
+        const newRec = { id: newId, ...recordData, po_file: tempPoFile ? tempPoFile.name : '', created_by: currentUser.email };
         if(tempPoFile) poFiles[newId] = tempPoFile;
         records.push(newRec);
         Swal.fire({title: 'Saved', icon: 'success', confirmButtonColor: '#3b82f6'});
     }
     showPage('records');
 }
-
 function deleteRecord(id) { 
     Swal.fire({ title: 'Delete?', text: 'Cannot undo', icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(res => {
         if(res.isConfirmed) { records = records.filter(r => r.id !== id); loadRecords(); updateDashboardCards(); }
@@ -1782,5 +1939,14 @@ function switchHistoryTab(type) {
     }).join('');
 }
 </script>
+<div id="upcomingModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="glass glass-dark rounded-3xl shadow-2xl w-[95%] max-w-2xl md:w-full h-[75vh] flex flex-col overflow-hidden page-transition">
+            <div class="p-5 border-b border-gray-100 flex justify-between items-center bg-white/40">
+                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2"><span class="text-red-500">⏰</span> Next 30 Days Schedule</h3>
+                <button onclick="closeUpcomingModal()" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 text-gray-500">✕</button>
+            </div>
+            <div id="upcomingModalContent" class="p-5 flex-1 overflow-y-auto custom-scroll space-y-3 bg-gray-50/50"></div>
+        </div>
+    </div>
 </body>
 </html>
